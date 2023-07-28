@@ -1,9 +1,8 @@
 package norm.closure.debruijn
 
-type Name = String
 type Env = List[Val]
-type Index = Int // innermost binding is 0
-type Level = Int // outermost binding is 0
+type Index = Int
+type Level = Int
 
 case class Closure(env: Env, body: Term):
   def apply(arg: Val): Val = eval(arg :: env, body)
@@ -41,7 +40,7 @@ def quote(envLen: Int, x: Val): Term = x match {
   case Val.App(func, arg) =>
     Term.App(quote(envLen, func), quote(envLen, arg))
   case Val.Lam(cl) =>
-    Term.Lam(quote(envLen + 1, cl.apply(Val.Var(envLen + 1))))
+    Term.Lam(quote(envLen + 1, cl.apply(Val.Var(envLen))))
 }
 
 def nf(env: Env, tm: Term): Term = quote(env.length, eval(env, tm))
