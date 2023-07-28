@@ -1,8 +1,11 @@
-package typecheck.hoas.names
+package typecheck.closure.names
 
 type Name = String
 type Env = Map[Name, Val]
 type Cxt = Map[Name, Val]
+
+case class Closure(param: Name, env: Env, body: Term):
+  def apply(arg: Val): Val = eval(env + (param -> arg), body)
 
 enum Term:
   case U
@@ -16,12 +19,12 @@ enum Val:
   case U
   case Var(name: Name)
   case App(func: Val, arg: Val)
-  case Lam(param: Name, value: Val => Val)
-  case Pi(param: Name, ty: Val, value: Val => Val)
+  case Lam(cl: Closure)
+  case Pi(cl: Closure, ty: Val)
 
   def apply(u: Val): Val = this match
-    case Lam(_, t) => t(u)
-    case t         => App(t, u)
+    case Lam(cl) => cl.apply(u)
+    case t       => App(t, u)
 
 def fresh(ns: List[Name], x: Name): Name = x match
   case "_"                 => "_"
@@ -36,9 +39,9 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.App(func, arg) =>
     eval(env, func).apply(eval(env, arg))
   case Term.Lam(param, body) =>
-    Val.Lam(param, arg => eval(env + (param -> arg), body))
+    Val.Lam(Closure(param, env, body))
   case Term.Pi(param, ty, body) =>
-    Val.Pi(param, eval(env, ty), arg => eval(env + (param -> arg), body))
+    Val.Pi(Closure(param, env, body), eval(env, ty))
   case Term.Let(name, ty, body, next) =>
     eval(env + (name -> eval(env, body)), next)
 
@@ -49,12 +52,12 @@ def quote(ns: List[Name], x: Val): Term = x match
     Term.Var(name)
   case Val.App(func, arg) =>
     Term.App(quote(ns, func), quote(ns, arg))
-  case Val.Lam(param, value) =>
-    val name = fresh(ns, param)
-    Term.Lam(name, quote(name :: ns, value(Val.Var(name))))
-  case Val.Pi(param, ty, value) =>
-    val name = fresh(ns, param)
-    Term.Pi(name, quote(ns, ty), quote(name :: ns, value(Val.Var(name))))
+  case Val.Lam(cl) =>
+    val name = fresh(ns, cl.param)
+    Term.Lam(name, quote(name :: ns, cl.apply(Val.Var(name))))
+  case Val.Pi(cl, ty) =>
+    val name = fresh(ns, cl.param)
+    Term.Pi(name, quote(ns, ty), quote(name :: ns, cl.apply(Val.Var(name))))
 
 def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
   case (Val.U, Val.U) =>
@@ -63,22 +66,22 @@ def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
     x == y
   case (Val.App(x1, x2), Val.App(y1, y2)) =>
     conv(env, x1, y1) && conv(env, x2, y2)
-  case (Val.Lam(x1, x2), Val.Lam(y1, y2)) =>
-    val name = fresh(env.keys.toList, x1);
+  case (Val.Lam(cl1), Val.Lam(cl2)) =>
+    val name = fresh(env.keys.toList, cl1.param);
     val value = Val.Var(name)
-    conv(env + (name -> value), x2(value), y2(value))
-  case (Val.Lam(x1, x2), y) =>
-    val name = fresh(env.keys.toList, x1)
+    conv(env + (name -> value), cl1.apply(value), cl2.apply(value))
+  case (Val.Lam(cl), y) =>
+    val name = fresh(env.keys.toList, cl.param)
     val value = Val.Var(name)
-    conv(env + (name -> value), x2(value), Val.App(y, value))
-  case (x, Val.Lam(y1, y2)) =>
-    val name = fresh(env.keys.toList, y1)
+    conv(env + (name -> value), cl.apply(value), Val.App(y, value))
+  case (x, Val.Lam(cl)) =>
+    val name = fresh(env.keys.toList, cl.param)
     val value = Val.Var(name)
-    conv(env + (name -> value), Val.App(x, value), y2(value))
-  case (Val.Pi(x1, x2, x3), Val.Pi(y1, y2, y3)) =>
-    val name = fresh(env.keys.toList, x1)
+    conv(env + (name -> value), Val.App(x, value), cl.apply(value))
+  case (Val.Pi(cl1, ty1), Val.Pi(cl2, ty2)) =>
+    val name = fresh(env.keys.toList, cl1.param)
     val value = Val.Var(name)
-    conv(env, x2, y2) && conv(env, x3(value), y3(value))
+    conv(env, ty1, ty2) && conv(env, cl1.apply(value), cl2.apply(value))
   case _ =>
     false
 
@@ -91,8 +94,8 @@ def infer(env: Env, cxt: Cxt, tm: Term): Val = tm match
       case None     => throw new Exception(s"$name is not in the context")
   case Term.App(func, arg) =>
     infer(env, cxt, func) match
-      case Val.Pi(_, ty, body) =>
-        if check(env, cxt, arg, ty) then body(eval(env, arg))
+      case Val.Pi(cl, ty) =>
+        if check(env, cxt, arg, ty) then cl.apply(eval(env, arg))
         else throw new Exception(s"$arg is not of type $ty")
       case _ =>
         throw new Exception(s"$func is not a function")
@@ -116,8 +119,8 @@ def infer(env: Env, cxt: Cxt, tm: Term): Val = tm match
     else throw new Exception(s"$ty is not a type")
 
 def check(env: Env, cxt: Cxt, tm: Term, ty: Val): Boolean = (tm, ty) match
-  case (Term.Lam(param, body), Val.Pi(param1, ty1, body1)) =>
+  case (Term.Lam(param, body), Val.Pi(cl, ty)) =>
     val value = Val.Var(fresh(env.keys.toList, param))
-    check(env + (param -> value), cxt + (param -> ty1), body, body1(value))
+    check(env + (param -> value), cxt + (param -> ty), body, cl.apply(value))
   case _ =>
     conv(env, infer(env, cxt, tm), ty)
