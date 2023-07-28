@@ -1,3 +1,5 @@
+package com.elab.norm.hoas.name
+
 type Name = String
 
 enum Term:
