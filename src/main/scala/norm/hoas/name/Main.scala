@@ -14,18 +14,16 @@ enum Val:
   case App(func: Val, arg: Val)
   case Lam(param: Name, value: Val => Val)
 
-  def apply(u: Val): Val = this match {
+  def apply(u: Val): Val = this match
     case Lam(_, t) => t(u)
     case t         => App(t, u)
-  }
 
-def fresh(ns: List[Name], x: Name): Name = x match {
+def fresh(ns: List[Name], x: Name): Name = x match
   case "_"                 => "_"
   case _ if ns.contains(x) => fresh(ns, x + "'")
   case _                   => x
-}
 
-def eval(env: Env, tm: Term): Val = tm match {
+def eval(env: Env, tm: Term): Val = tm match
   case Term.Var(name) =>
     env.get(name).get
   case Term.Lam(param, body) =>
@@ -34,9 +32,8 @@ def eval(env: Env, tm: Term): Val = tm match {
     eval(env, func).apply(eval(env, arg))
   case Term.Let(name, body, next) =>
     eval(env + (name -> eval(env, body)), next)
-}
 
-def quote(ns: List[Name], x: Val): Term = x match {
+def quote(ns: List[Name], x: Val): Term = x match
   case Val.Var(name) =>
     Term.Var(name)
   case Val.App(func, arg) =>
@@ -44,6 +41,5 @@ def quote(ns: List[Name], x: Val): Term = x match {
   case Val.Lam(param, value) =>
     val name = fresh(ns, param)
     Term.Lam(name, quote(name :: ns, value(Val.Var(name))))
-}
 
 def nf(env: Env, tm: Term): Term = quote(env.keys.toList, eval(env, tm))
