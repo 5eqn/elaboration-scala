@@ -17,4 +17,12 @@ class TestSuite extends munit.FunSuite {
     val result = nf(sampleEnv, sampleTerm)
     assertEquals(result, expectedNormalizedForm)
   }
+  test("norm.closure.debruijn") {
+    import norm.closure.debruijn._
+    val sampleEnv: Env = List(Val.Var(0))
+    val sampleTerm: Term = Term.App(Term.Lam(Term.Var(0)), Term.Var(1))
+    val expectedNormalizedForm: Term = Term.Var(1)
+    val result = nf(sampleEnv, sampleTerm)
+    assertEquals(result, expectedNormalizedForm)
+  }
 }
