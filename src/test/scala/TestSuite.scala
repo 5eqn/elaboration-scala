@@ -1,8 +1,8 @@
 // For more information on writing tests, see
 // https://scalameta.org/munit/docs/getting-started.html
 class TestSuite extends munit.FunSuite {
-  test("norm.hoas.name") {
-    import norm.hoas.name._
+  test("norm.hoas.names") {
+    import norm.hoas.names._
     val sampleEnv: Env = Map("a" -> Val.Var("a"), "g" -> Val.Var("g"))
     val sampleTerm: Term = Term.Let(
       "f",
@@ -15,8 +15,8 @@ class TestSuite extends munit.FunSuite {
     assertEquals(result, expectedNormalizedForm)
   }
 
-  test("norm.closure.name") {
-    import norm.closure.name._
+  test("norm.closure.names") {
+    import norm.closure.names._
     val sampleEnv: Env = Map("a" -> Val.Var("a"), "g" -> Val.Var("g"))
     val sampleTerm: Term = Term.Let(
       "f",
@@ -42,8 +42,8 @@ class TestSuite extends munit.FunSuite {
     assertEquals(result, expectedNormalizedForm)
   }
 
-  test("typecheck.hoas.name") {
-    import typecheck.hoas.name._
+  test("typecheck.hoas.names") {
+    import typecheck.hoas.names._
     val env: Env =
       Map(
         "Nat" -> Val.Var("Nat"),
