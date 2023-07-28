@@ -44,15 +44,14 @@ class TestSuite extends munit.FunSuite {
 
   test("typecheck.hoas.names") {
     import typecheck.hoas.names._
-    val env: Env =
-      Map(
-        "Nat" -> Val.Var("Nat"),
-        "S" -> Val.Var("S"),
-        "Z" -> Val.Var("Z"),
-        "Vect" -> Val.Var("Vect"),
-        "Nil" -> Val.Var("Nil"),
-        "Cons" -> Val.Var("Cons")
-      )
+    val env: Env = Map(
+      "Nat" -> Val.Var("Nat"),
+      "S" -> Val.Var("S"),
+      "Z" -> Val.Var("Z"),
+      "Vect" -> Val.Var("Vect"),
+      "Nil" -> Val.Var("Nil"),
+      "Cons" -> Val.Var("Cons")
+    )
     val cxt: Cxt = Map(
       "Nat" -> Val.U,
       "S" -> Val.Pi("_", Val.Var("Nat"), _ => Val.Var("Nat")),
@@ -110,17 +109,16 @@ class TestSuite extends munit.FunSuite {
     assertEquals(valRes, true)
   }
 
-  test("typecheck.closure.names") {
+  test("typecheck.closure.names (vect)") {
     import typecheck.closure.names._
-    val env: Env =
-      Map(
-        "Nat" -> Val.Var("Nat"),
-        "S" -> Val.Var("S"),
-        "Z" -> Val.Var("Z"),
-        "Vect" -> Val.Var("Vect"),
-        "Nil" -> Val.Var("Nil"),
-        "Cons" -> Val.Var("Cons")
-      )
+    val env: Env = Map(
+      "Nat" -> Val.Var("Nat"),
+      "S" -> Val.Var("S"),
+      "Z" -> Val.Var("Z"),
+      "Vect" -> Val.Var("Vect"),
+      "Nil" -> Val.Var("Nil"),
+      "Cons" -> Val.Var("Cons")
+    )
     val cxt: Cxt = Map(
       "Nat" -> Val.U,
       "S" -> Val.Pi(Closure("_", env, Term.Var("Nat")), Val.Var("Nat")),
@@ -173,6 +171,34 @@ class TestSuite extends munit.FunSuite {
       Term.App(Term.Var("S"), Term.App(Term.Var("S"), Term.Var("Z"))),
       Term.App(Term.Var("Vect"), Term.Var("two"))
     )
+    val tyRes = check(env, cxt, ty, Val.U)
+    assertEquals(tyRes, true)
+    val valRes = check(env, cxt, tm, eval(env, ty))
+    assertEquals(valRes, true)
+  }
+
+  test("typecheck.closure.names (eta)") {
+    import typecheck.closure.names._
+    val env: Env = Map(
+      "A" -> Val.Var("A"),
+      "f" -> Val.Var("f"),
+      "B" -> Val.Var("B"),
+      "MkB" -> Val.Var("MkB")
+    )
+    val cxt: Cxt = Map(
+      "A" -> Val.U,
+      "f" -> Val.Pi(Closure("_", env, Term.Var("A")), Val.Var("A")),
+      "B" -> Val.Pi(
+        Closure("_", env, Term.U),
+        Val.Pi(Closure("_", env, Term.Var("A")), Val.Var("A"))
+      ),
+      "MkB" -> Val.App(
+        Val.Var("B"),
+        Val.Lam(Closure("x", env, Term.App(Term.Var("f"), Term.Var("x"))))
+      )
+    )
+    val tm: Term = Term.Var("MkB")
+    val ty: Term = Term.App(Term.Var("B"), Term.Var("f"))
     val tyRes = check(env, cxt, ty, Val.U)
     assertEquals(tyRes, true)
     val valRes = check(env, cxt, tm, eval(env, ty))
