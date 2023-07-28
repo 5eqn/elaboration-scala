@@ -9,3 +9,10 @@ Simply run:
 ```sh
 sbt test
 ```
+
+## Difficulty Order
+
+1. norm
+  1. norm.hoas.name
+  2. norm.closure.name
+  3. norm.closure.debruijn
