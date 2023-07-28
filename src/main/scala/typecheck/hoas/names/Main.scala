@@ -1,4 +1,4 @@
-package typecheck.hoas.name
+package typecheck.hoas.names
 
 type Name = String
 type Env = Map[Name, Val]

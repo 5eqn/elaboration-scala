@@ -1,4 +1,4 @@
-package norm.hoas.name
+package norm.hoas.names
 
 type Name = String
 type Env = Map[Name, Val]

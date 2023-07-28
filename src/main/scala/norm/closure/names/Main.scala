@@ -1,4 +1,4 @@
-package norm.closure.name
+package norm.closure.names
 
 type Name = String
 type Env = Map[Name, Val]
