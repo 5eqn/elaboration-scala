@@ -10,6 +10,8 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - When inferring type of `Pi x a b`, I forgot to make sure `b : U`
 - When inferring type of `Let x a t u`, I forgot to make sure `a: t`
 - I made sure when `(\_ => ?) : A -> ?`, `A : U`, elaboration-zoo didn't check that (because type itself is already typechecked?)
+- did not fresh a new name in `conv`
+- did not check eta conversion
 
 Here are some of my unclear points:
 
