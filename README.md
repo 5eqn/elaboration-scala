@@ -26,6 +26,10 @@ sbt test
 ## Difficulty Order
 
 1. norm
-    1. norm.hoas.name
-    2. norm.closure.name
+    1. norm.hoas.names
+    2. norm.closure.names
     3. norm.closure.debruijn
+2. typecheck
+    1. typecheck.hoas.names
+    2. typecheck.closure.names
+    3. typecheck.closure.debruijn
