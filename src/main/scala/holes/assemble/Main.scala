@@ -90,26 +90,23 @@ def quote(envLen: Level, x: Val): Term = x match
       quote(envLen + 1, cl(Val.Var(envLen)))
     )
 
-def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
+def conv(envLen: Level, x: Val, y: Val): Boolean = (x, y) match
   case (Val.U, Val.U) =>
     true
   case (Val.Var(x), Val.Var(y)) =>
     x == y
   case (Val.App(x1, x2), Val.App(y1, y2)) =>
-    conv(env, x1, y1) && conv(env, x2, y2)
-  case (Val.Lam(_, cl1), Val.Lam(_, cl2)) =>
-    val value = Val.Var(env.length)
-    conv(value :: env, cl1(value), cl2(value))
+    conv(envLen, x1, y1) && conv(envLen, x2, y2)
   case (Val.Lam(_, cl), y) =>
-    val value = Val.Var(env.length)
-    conv(value :: env, cl(value), Val.App(y, value))
+    val value = Val.Var(envLen)
+    conv(envLen + 1, cl(value), y(value))
   case (x, Val.Lam(_, cl)) =>
-    val value = Val.Var(env.length)
-    conv(value :: env, Val.App(x, value), cl(value))
+    val value = Val.Var(envLen)
+    conv(envLen + 1, x(value), cl(value))
   case (Val.Pi(_, ty1, cl1), Val.Pi(_, ty2, cl2)) =>
-    val value = Val.Var(env.length)
-    conv(env, ty1, ty2) && conv(
-      value :: env,
+    val value = Val.Var(envLen)
+    conv(envLen, ty1, ty2) && conv(
+      envLen + 1,
       cl1(value),
       cl2(value)
     )
@@ -150,7 +147,7 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term = (tm, ty) match
     Term.Lam(param, bodyVal)
   case _ =>
     val (term, value) = infer(ctx, tm)
-    if conv(ctx.env, value, ty) then term
+    if conv(ctx.envLen, value, ty) then term
     else
       throw new Exception(
         s"$term has type $value but $ty was expected\nctx: $ctx"
