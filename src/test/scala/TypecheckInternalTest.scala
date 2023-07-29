@@ -1,48 +1,7 @@
 // For more information on writing tests, see
 // https://scalameta.org/munit/docs/getting-started.html
-class TestSuite extends munit.FunSuite {
-  test("norm.hoas.names") {
-    import norm.hoas.names._
-    val sampleEnv: Env = Map("a" -> Val.Var("a"), "g" -> Val.Var("g"))
-    val sampleTerm: Term = Term.Let(
-      "f",
-      Term.Lam("x", Term.Var("x")),
-      Term.App(Term.Var("f"), Term.App(Term.Var("g"), Term.Var("f")))
-    )
-    val expectedNormalizedForm: Term =
-      Term.App(Term.Var("g"), Term.Lam("x", Term.Var("x")))
-    val result = nf(sampleEnv, sampleTerm)
-    assertEquals(result, expectedNormalizedForm)
-  }
-
-  test("norm.closure.names") {
-    import norm.closure.names._
-    val sampleEnv: Env = Map("a" -> Val.Var("a"), "g" -> Val.Var("g"))
-    val sampleTerm: Term = Term.Let(
-      "f",
-      Term.Lam("x", Term.Var("x")),
-      Term.App(Term.Var("f"), Term.App(Term.Var("g"), Term.Var("f")))
-    )
-    val expectedNormalizedForm: Term =
-      Term.App(Term.Var("g"), Term.Lam("x", Term.Var("x")))
-    val result = nf(sampleEnv, sampleTerm)
-    assertEquals(result, expectedNormalizedForm)
-  }
-
-  test("norm.closure.debruijn") {
-    import norm.closure.debruijn._
-    val sampleEnv: Env = List(Val.Var(1), Val.Var(0))
-    val sampleTerm: Term = Term.Let(
-      Term.Lam(Term.Var(0)),
-      Term.App(Term.Var(0), Term.App(Term.Var(2), Term.Var(0)))
-    )
-    val expectedNormalizedForm: Term =
-      Term.App(Term.Var(1), Term.Lam(Term.Var(0)))
-    val result = nf(sampleEnv, sampleTerm)
-    assertEquals(result, expectedNormalizedForm)
-  }
-
-  test("typecheck.hoas.names") {
+class TypecheckInternalTest extends munit.FunSuite {
+  test("typecheck.hoas.env.names") {
     import typecheck.hoas.names._
     val env: Env = Map(
       "Nat" -> Val.Var("Nat"),
@@ -109,7 +68,104 @@ class TestSuite extends munit.FunSuite {
     assertEquals(valRes, true)
   }
 
-  test("typecheck.closure.names (vect)") {
+  test("typecheck.hoas.lambda.vect") {
+    import typecheck.hoas.names._
+    val env: Env = Map()
+    val cxt: Cxt = Map()
+    val tm: Term = Term.Lam(
+      "Nat",
+      Term.Lam(
+        "S",
+        Term.Lam(
+          "Z",
+          Term.Lam(
+            "Vect",
+            Term.Lam(
+              "Nil",
+              Term.Lam(
+                "Cons",
+                Term.Let(
+                  "one",
+                  Term.Var("Nat"),
+                  Term.App(Term.Var("S"), Term.Var("Z")),
+                  Term.Let(
+                    "unaryVect",
+                    Term.App(Term.Var("Vect"), Term.Var("one")),
+                    Term.App(
+                      Term.App(
+                        Term.App(Term.Var("Cons"), Term.Var("Z")),
+                        Term.Var("Nil")
+                      ),
+                      Term.Var("Z")
+                    ),
+                    Term.App(
+                      Term.App(
+                        Term.App(Term.Var("Cons"), Term.Var("one")),
+                        Term.Var("unaryVect")
+                      ),
+                      Term.Var("Z")
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    val ty: Term = Term.Pi(
+      "Nat",
+      Term.U,
+      Term.Pi(
+        "S",
+        Term.Pi("_", Term.Var("Nat"), Term.Var("Nat")),
+        Term.Pi(
+          "Z",
+          Term.Var("Nat"),
+          Term.Pi(
+            "Vect",
+            Term.Pi("_", Term.Var("Nat"), Term.U),
+            Term.Pi(
+              "Nil",
+              Term.App(Term.Var("Vect"), Term.Var("Z")),
+              Term.Pi(
+                "Cons",
+                Term.Pi(
+                  "n",
+                  Term.Var("Nat"),
+                  Term.Pi(
+                    "_",
+                    Term.App(Term.Var("Vect"), Term.Var("n")),
+                    Term.Pi(
+                      "_",
+                      Term.Var("Nat"),
+                      Term.App(
+                        Term.Var("Vect"),
+                        Term.App(Term.Var("S"), Term.Var("n"))
+                      )
+                    )
+                  )
+                ),
+                Term.Let(
+                  "two",
+                  Term.Var("Nat"),
+                  Term
+                    .App(Term.Var("S"), Term.App(Term.Var("S"), Term.Var("Z"))),
+                  Term.App(Term.Var("Vect"), Term.Var("two"))
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+    val tyRes = check(env, cxt, ty, Val.U)
+    assertEquals(tyRes, true)
+    val valRes = check(env, cxt, tm, eval(env, ty))
+    assertEquals(valRes, true)
+  }
+
+  test("typecheck.closure.names.env.vect") {
     import typecheck.closure.names._
     val env: Env = Map(
       "Nat" -> Val.Var("Nat"),
@@ -177,7 +233,7 @@ class TestSuite extends munit.FunSuite {
     assertEquals(valRes, true)
   }
 
-  test("typecheck.closure.names (eta)") {
+  test("typecheck.closure.names.env.eta") {
     import typecheck.closure.names._
     val env: Env = Map(
       "A" -> Val.Var("A"),
@@ -205,7 +261,7 @@ class TestSuite extends munit.FunSuite {
     assertEquals(valRes, true)
   }
 
-  test("typecheck.closure.debruijn") {
+  test("typecheck.closure.debruijn.env.vect") {
     import typecheck.closure.debruijn._
     val env: Env = List(
       Val.Var(5),
