@@ -36,11 +36,6 @@ enum Val:
     case Lam(param, cl) => cl(u)
     case t              => App(t, u)
 
-def fresh(ns: List[Name], x: Name): Name = x match
-  case "_"                 => "_"
-  case _ if ns.contains(x) => fresh(ns, x + "'")
-  case _                   => x
-
 def eval(env: Env, tm: Term): Val = tm match
   case Term.U =>
     Val.U
