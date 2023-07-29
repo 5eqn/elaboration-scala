@@ -12,7 +12,7 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - I made sure when `(\_ => ?) : A -> ?`, `A : U`, elaboration-zoo didn't check that (because type itself is already typechecked?)
 - did not fresh a new name in `conv`
 - did not check eta conversion
-- In `(x : A) -> ?`, `?` can't include `x`, but I mistakenly assigned a de-bruijn index when writting tests
+- In `(x : A) -> ?`, `A` can't include `x`, but I mistakenly assigned a de-bruijn index when writting tests
 - When generating `Term` in bidirectional elaboration, I made the context wrong in `Let` and `Lam`.
 
 Here are some of my unclear points:
