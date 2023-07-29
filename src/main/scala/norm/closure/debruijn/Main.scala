@@ -19,16 +19,16 @@ enum Val:
   case Lam(cl: Closure)
 
   def apply(u: Val): Val = this match
-    case Lam(cl) => cl.apply(u)
+    case Lam(cl) => cl(u)
     case t       => App(t, u)
 
 def eval(env: Env, tm: Term): Val = tm match
   case Term.Var(index) =>
-    env.apply(index)
+    env(index)
   case Term.Lam(body) =>
     Val.Lam(Closure(env, body))
   case Term.App(func, arg) =>
-    eval(env, func).apply(eval(env, arg))
+    eval(env, func)(eval(env, arg))
   case Term.Let(body, next) =>
     eval(eval(env, body) :: env, next)
 
@@ -38,6 +38,6 @@ def quote(envLen: Int, x: Val): Term = x match
   case Val.App(func, arg) =>
     Term.App(quote(envLen, func), quote(envLen, arg))
   case Val.Lam(cl) =>
-    Term.Lam(quote(envLen + 1, cl.apply(Val.Var(envLen))))
+    Term.Lam(quote(envLen + 1, cl(Val.Var(envLen))))
 
 def nf(env: Env, tm: Term): Term = quote(env.length, eval(env, tm))

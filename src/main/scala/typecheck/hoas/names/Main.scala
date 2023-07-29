@@ -34,7 +34,7 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.Var(name) =>
     env.get(name).get
   case Term.App(func, arg) =>
-    eval(env, func).apply(eval(env, arg))
+    eval(env, func)(eval(env, arg))
   case Term.Lam(param, body) =>
     Val.Lam(param, arg => eval(env + (param -> arg), body))
   case Term.Pi(param, ty, body) =>

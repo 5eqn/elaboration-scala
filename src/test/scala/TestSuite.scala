@@ -204,4 +204,74 @@ class TestSuite extends munit.FunSuite {
     val valRes = check(env, cxt, tm, eval(env, ty))
     assertEquals(valRes, true)
   }
+
+  test("typecheck.closure.debruijn") {
+    import typecheck.closure.debruijn._
+    val env: Env = List(
+      Val.Var(5),
+      Val.Var(4),
+      Val.Var(3),
+      Val.Var(2),
+      Val.Var(1),
+      Val.Var(0)
+    )
+    // these are defined mutually so it's not broken
+    val cxt: Cxt = Map(
+      "Nat" -> (5, Val.U),
+      "S" -> (4, Val.Pi("_", Val.Var(5), Closure(env, Term.Var(1)))),
+      "Z" -> (3, Val.Var(5)),
+      "Vect" -> (2, Val.Pi("_", Val.Var(5), Closure(env, Term.U))),
+      "Nil" -> (1, Val.App(Val.Var(2), Val.Var(3))),
+      "Cons" -> (0, Val.Pi(
+        "n",
+        Val.Var(5),
+        Closure(
+          env,
+          Term.Pi(
+            "_",
+            Term.App(Term.Var(4), Term.Var(0)),
+            Term.Pi(
+              "_",
+              Term.Var(2),
+              Term.App(
+                Term.Var(6),
+                Term.App(Term.Var(4), Term.Var(2))
+              )
+            )
+          )
+        )
+      ))
+    )
+    val tm: Raw = Raw.Let(
+      "one",
+      Raw.Var("Nat"),
+      Raw.App(Raw.Var("S"), Raw.Var("Z")),
+      Raw.Let(
+        "unaryVect",
+        Raw.App(Raw.Var("Vect"), Raw.Var("one")),
+        Raw.App(
+          Raw.App(
+            Raw.App(Raw.Var("Cons"), Raw.Var("Z")),
+            Raw.Var("Nil")
+          ),
+          Raw.Var("Z")
+        ),
+        Raw.App(
+          Raw.App(
+            Raw.App(Raw.Var("Cons"), Raw.Var("one")),
+            Raw.Var("unaryVect")
+          ),
+          Raw.Var("Z")
+        )
+      )
+    )
+    val ty = Raw.Let(
+      "two",
+      Raw.Var("Nat"),
+      Raw.App(Raw.Var("S"), Raw.App(Raw.Var("S"), Raw.Var("Z"))),
+      Raw.App(Raw.Var("Vect"), Raw.Var("two"))
+    )
+    val tyTerm = check(env, cxt, ty, Val.U)
+    val valTerm = check(env, cxt, tm, eval(env, tyTerm))
+  }
 }
