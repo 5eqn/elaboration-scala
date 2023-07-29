@@ -29,7 +29,7 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.Lam(param, body) =>
     Val.Lam(param, arg => eval(env + (param -> arg), body))
   case Term.App(func, arg) =>
-    eval(env, func).apply(eval(env, arg))
+    eval(env, func)(eval(env, arg))
   case Term.Let(name, body, next) =>
     eval(env + (name -> eval(env, body)), next)
 

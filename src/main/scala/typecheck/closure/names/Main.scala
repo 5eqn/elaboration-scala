@@ -23,7 +23,7 @@ enum Val:
   case Pi(cl: Closure, ty: Val)
 
   def apply(u: Val): Val = this match
-    case Lam(cl) => cl.apply(u)
+    case Lam(cl) => cl(u)
     case t       => App(t, u)
 
 def fresh(ns: List[Name], x: Name): Name = x match
@@ -37,7 +37,7 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.Var(name) =>
     env.get(name).get
   case Term.App(func, arg) =>
-    eval(env, func).apply(eval(env, arg))
+    eval(env, func)(eval(env, arg))
   case Term.Lam(param, body) =>
     Val.Lam(Closure(param, env, body))
   case Term.Pi(param, ty, body) =>
@@ -54,10 +54,10 @@ def quote(ns: List[Name], x: Val): Term = x match
     Term.App(quote(ns, func), quote(ns, arg))
   case Val.Lam(cl) =>
     val name = fresh(ns, cl.param)
-    Term.Lam(name, quote(name :: ns, cl.apply(Val.Var(name))))
+    Term.Lam(name, quote(name :: ns, cl(Val.Var(name))))
   case Val.Pi(cl, ty) =>
     val name = fresh(ns, cl.param)
-    Term.Pi(name, quote(ns, ty), quote(name :: ns, cl.apply(Val.Var(name))))
+    Term.Pi(name, quote(ns, ty), quote(name :: ns, cl(Val.Var(name))))
 
 def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
   case (Val.U, Val.U) =>
@@ -69,19 +69,23 @@ def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
   case (Val.Lam(cl1), Val.Lam(cl2)) =>
     val name = fresh(env.keys.toList, cl1.param);
     val value = Val.Var(name)
-    conv(env + (name -> value), cl1.apply(value), cl2.apply(value))
+    conv(env + (name -> value), cl1(value), cl2(value))
   case (Val.Lam(cl), y) =>
     val name = fresh(env.keys.toList, cl.param)
     val value = Val.Var(name)
-    conv(env + (name -> value), cl.apply(value), Val.App(y, value))
+    conv(env + (name -> value), cl(value), Val.App(y, value))
   case (x, Val.Lam(cl)) =>
     val name = fresh(env.keys.toList, cl.param)
     val value = Val.Var(name)
-    conv(env + (name -> value), Val.App(x, value), cl.apply(value))
+    conv(env + (name -> value), Val.App(x, value), cl(value))
   case (Val.Pi(cl1, ty1), Val.Pi(cl2, ty2)) =>
     val name = fresh(env.keys.toList, cl1.param)
     val value = Val.Var(name)
-    conv(env, ty1, ty2) && conv(env, cl1.apply(value), cl2.apply(value))
+    conv(env, ty1, ty2) && conv(
+      env + (name -> value),
+      cl1(value),
+      cl2(value)
+    )
   case _ =>
     false
 
@@ -95,7 +99,7 @@ def infer(env: Env, cxt: Cxt, tm: Term): Val = tm match
   case Term.App(func, arg) =>
     infer(env, cxt, func) match
       case Val.Pi(cl, ty) =>
-        if check(env, cxt, arg, ty) then cl.apply(eval(env, arg))
+        if check(env, cxt, arg, ty) then cl(eval(env, arg))
         else throw new Exception(s"$arg is not of type $ty")
       case _ =>
         throw new Exception(s"$func is not a function")
@@ -121,6 +125,6 @@ def infer(env: Env, cxt: Cxt, tm: Term): Val = tm match
 def check(env: Env, cxt: Cxt, tm: Term, ty: Val): Boolean = (tm, ty) match
   case (Term.Lam(param, body), Val.Pi(cl, ty)) =>
     val value = Val.Var(fresh(env.keys.toList, param))
-    check(env + (param -> value), cxt + (param -> ty), body, cl.apply(value))
+    check(env + (param -> value), cxt + (param -> ty), body, cl(value))
   case _ =>
     conv(env, infer(env, cxt, tm), ty)
