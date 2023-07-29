@@ -46,7 +46,7 @@ class TypecheckParsedTest extends munit.FunSuite {
     val term = infer(env, cxt, raw)
   }
 
-  test("typecheck.hoas.names.parsed.polomorphic") {
+  test("typecheck.hoas.names.parsed.polymorphic") {
     import typecheck.hoas.names._
     val raw = ScalaParser.parseInput("""
     let id : (A : U) -> A -> A
@@ -91,7 +91,7 @@ class TypecheckParsedTest extends munit.FunSuite {
     val term = infer(env, cxt, raw)
   }
 
-  test("typecheck.closure.names.parsed.polomorphic") {
+  test("typecheck.closure.names.parsed.polymorphic") {
     import typecheck.closure.names._
     val raw = ScalaParser.parseInput("""
     let id : (A : U) -> A -> A
@@ -136,7 +136,7 @@ class TypecheckParsedTest extends munit.FunSuite {
     val term = infer(env, cxt, raw)
   }
 
-  test("typecheck.closure.debruijn.parsed.polomorphic") {
+  test("typecheck.closure.debruijn.parsed.polymorphic") {
     import typecheck.closure.debruijn._
     val raw = ScalaParser.parseInput("""
     let id : (A : U) -> A -> A
