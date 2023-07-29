@@ -50,7 +50,7 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.Let(name, ty, body, next) =>
     eval(eval(env, body) :: env, next)
 
-def quote(envLen: Int, x: Val): Term = x match
+def quote(envLen: Level, x: Val): Term = x match
   case Val.U =>
     Term.U
   case Val.Var(level) =>

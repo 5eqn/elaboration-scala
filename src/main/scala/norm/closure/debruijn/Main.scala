@@ -32,7 +32,7 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.Let(body, next) =>
     eval(eval(env, body) :: env, next)
 
-def quote(envLen: Int, x: Val): Term = x match
+def quote(envLen: Level, x: Val): Term = x match
   case Val.Var(level) =>
     Term.Var(envLen - level - 1)
   case Val.App(func, arg) =>
