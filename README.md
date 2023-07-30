@@ -28,6 +28,8 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - I forgot to force some values when implementing holes
 - I ignored the fact that let-bound variables exist in `env` as complicated objects, partial renaming shouldn't fail on these
 - I forgot to update the solved meta to memory (literally)
+- I forgot to check if lhs and rhs are both meta first in `unify`
+- I forgot to enable checking type of lambdas
 
 Here are some of my unclear points:
 
