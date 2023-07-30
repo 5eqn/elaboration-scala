@@ -57,14 +57,19 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     2. norm.closure.names (2*)
     3. norm.closure.debruijn (4*)
 2. typecheck
-    1. typecheck.hoas.names (5*)
+    1. typecheck.hoas.names (4*)
     2. typecheck.closure.names (1*)
-    3. typecheck.closure.debruijn (1*)
+    3. typecheck.closure.debruijn (3*)
 3. holes
     1. holes.assemble (1*)
-    2. holes.spine (2*)
-    3. holes.renaming (3*)
+    2. holes.spine (3*)
+    3. holes.renaming (4*)
     4. holes.meta (5*)
+4. implicit
+    1. implicit.modularize (1*)
+    2. implicit.model (3*)
+    3. implicit.insert (4*)
+    4. implicit.check (5*)
 
 ## Contribution
 
