@@ -19,10 +19,9 @@ enum MetaState:
 object Meta:
   var map = Map[MetaID, MetaState]()
   var metaCount = -1
-  def value(metaID: MetaID): Val = state(metaID) match
+  def value(metaID: MetaID): Val = map(metaID) match
     case MetaState.Unsolved      => Val.Meta(metaID)
     case MetaState.Solved(value) => value
-  def state(metaID: MetaID): MetaState = map(metaID)
   def fresh: Term =
     metaCount += 1
     map += (metaCount -> MetaState.Unsolved)
@@ -56,6 +55,7 @@ case class Closure(env: Env, body: Term):
 case class PartialRenaming(cod: Level, dom: Level, map: Map[Int, Level]):
   def lift: PartialRenaming =
     PartialRenaming(cod + 1, dom + 1, map + (cod -> dom))
+  def nextCod: Val = Val.Var(cod)
 
 enum Raw:
   case U
@@ -98,9 +98,9 @@ enum Val:
   def apply(sp: Spine): Val =
     sp.foldRight(this)((value, term) => term(value))
 
-  // update a meta value to (at most) weak head normal form, to be pattern matched
+  // try to update a meta value to weak head normal form (WHNF) to be pattern matched
   // WHNF: suppose `S` is a constructor, S _ is WHNF, ?0 _ is not WHNF
-  // in other words, WHNF doesn't care what the spine is
+  // WHNF doesn't care what the spine is
   def force: Val = this match
     case Flex(metaID, spine) => Meta.value(metaID)(spine)
     case _                   => this
@@ -131,26 +131,27 @@ def eval(env: Env, tm: Term): Val = tm match
     eval(eval(env, body) :: env, next)
 
 // update x first
-def quote(envLen: Level, x: Val): Term = x.force match
-  case Val.U =>
-    Term.U
-  // similar to the Rigid case
-  case Val.Flex(metaID, spine) =>
-    spine.foldRight(Term.Meta(metaID))((value, term) =>
+def quote(envLen: Level, x: Val): Term =
+  val quoteSp = (spine: Spine, initialTerm: Term) =>
+    spine.foldRight(initialTerm)((value, term) =>
       Term.App(term, quote(envLen, value))
     )
-  case Val.Rigid(level, spine) =>
-    spine.foldRight(Term.Var(envLen - level - 1))((value, term) =>
-      Term.App(term, quote(envLen, value))
-    )
-  case Val.Lam(param, cl) =>
-    Term.Lam(param, quote(envLen + 1, cl(Val.Var(envLen))))
-  case Val.Pi(param, ty, cl) =>
-    Term.Pi(
-      param,
-      quote(envLen, ty),
-      quote(envLen + 1, cl(Val.Var(envLen)))
-    )
+  x.force match
+    case Val.U =>
+      Term.U
+    // similar to the Rigid case
+    case Val.Flex(metaID, spine) =>
+      quoteSp(spine, Term.Meta(metaID))
+    case Val.Rigid(level, spine) =>
+      quoteSp(spine, Term.Var(envLen - level - 1))
+    case Val.Lam(param, cl) =>
+      Term.Lam(param, quote(envLen + 1, cl(Val.Var(envLen))))
+    case Val.Pi(param, ty, cl) =>
+      Term.Pi(
+        param,
+        quote(envLen, ty),
+        quote(envLen + 1, cl(Val.Var(envLen)))
+      )
 
 def invert(envLen: Level, spine: Spine): PartialRenaming =
   spine.foldRight(PartialRenaming(envLen, 0, Map()))((value, pr) =>
@@ -166,36 +167,35 @@ def invert(envLen: Level, spine: Spine): PartialRenaming =
   )
 
 // update value first
-def rename(renamedMeta: MetaID, pr: PartialRenaming, value: Val): Term =
+def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
+  val renameSp = (spine: Spine, initialTerm: Term) =>
+    spine.foldRight(initialTerm)((value, term) =>
+      Term.App(term, rename(lhs, pr, value))
+    )
   value.force match
     case Val.U =>
       Term.U
-    case Val.Flex(metaID, spine) =>
+    case Val.Flex(rhs, spine) =>
       // occurence check is added
-      if metaID == renamedMeta then
-        throw new Exception(s"can't rename $metaID due to occurence check")
-      spine.foldRight(Term.Meta(metaID))((value, term) =>
-        Term.App(term, rename(renamedMeta, pr, value))
-      )
+      if rhs == lhs then throw new Exception(s"$rhs occurs in rhs")
+      else renameSp(spine, Term.Meta(rhs))
     case Val.Rigid(level, spine) =>
-      spine.foldRight(Term.Var(pr.dom - pr.map(level) - 1))((value, term) =>
-        Term.App(term, rename(renamedMeta, pr, value))
-      )
+      renameSp(spine, Term.Var(pr.dom - pr.map(level) - 1))
     case Val.Lam(param, cl) =>
-      Term.Lam(param, rename(renamedMeta, pr.lift, cl(Val.Var(pr.cod))))
+      Term.Lam(param, rename(lhs, pr.lift, cl(pr.nextCod)))
     case Val.Pi(param, ty, cl) =>
       Term.Pi(
         param,
-        rename(renamedMeta, pr, ty),
-        rename(renamedMeta, pr.lift, cl(Val.Var(pr.cod)))
+        rename(lhs, pr, ty),
+        rename(lhs, pr.lift, cl(pr.nextCod))
       )
 
 // due to occurence check, ID of renamed meta should be provided
-def solve(renamedMeta: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
+def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
   val pr = invert(envLen, sp)
-  val tm = rename(renamedMeta, pr, rhs)
+  val tm = rename(lhs, pr, rhs)
   Meta.solve(
-    renamedMeta,
+    lhs,
     eval(
       List(),
       (0 until pr.dom).foldRight(tm)((lvl, term) => Term.Lam("x" + lvl, term))
@@ -203,33 +203,39 @@ def solve(renamedMeta: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
   )
 
 // force parameters so that metas are not re-solved
-def unify(envLen: Level, x: Val, y: Val): Unit = (x.force, y.force) match
-  case (Val.U, Val.U) =>
-  // when unifying, try to solve meta
-  case (Val.Flex(id, spine), y) => solve(id, envLen, spine, y)
-  case (x, Val.Flex(id, spine)) => solve(id, envLen, spine, x)
-  case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
-    if x != y then throw new Exception(s"rigid root differs: $x != $y")
-    spx.foldRight(spy)((vx, spy) =>
-      spy match
+def unify(envLen: Level, x: Val, y: Val): Unit =
+  val unifySp = (x: Spine, y: Spine) =>
+    x.foldRight(y)((vx, y) =>
+      y match
         case vy :: rem => unify(envLen, vx, vy); rem
         case _         => throw new Exception("spine length differs")
     )
-  case (Val.Lam(_, cl), y) =>
-    val value = Val.Var(envLen)
-    unify(envLen + 1, cl(value), y(value))
-  case (x, Val.Lam(_, cl)) =>
-    val value = Val.Var(envLen)
-    unify(envLen + 1, x(value), cl(value))
-  case (Val.Pi(_, ty1, cl1), Val.Pi(_, ty2, cl2)) =>
-    val value = Val.Var(envLen)
-    unify(envLen, ty1, ty2)
-    unify(
-      envLen + 1,
-      cl1(value),
-      cl2(value)
-    )
-  case _ => throw new Exception(s"unable to unify $x and $y")
+  (x.force, y.force) match
+    case (Val.U, Val.U) =>
+    case (Val.Flex(x, spx), Val.Flex(y, spy)) =>
+      if x != y then throw new Exception(s"flex root differs: $x != $y")
+      else unifySp(spx, spy)
+    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
+      if x != y then throw new Exception(s"rigid root differs: $x != $y")
+      else unifySp(spx, spy)
+    // when unifying, try to solve meta
+    case (Val.Flex(id, spine), y) => solve(id, envLen, spine, y)
+    case (x, Val.Flex(id, spine)) => solve(id, envLen, spine, x)
+    case (Val.Lam(_, cl), y) =>
+      val value = Val.Var(envLen)
+      unify(envLen + 1, cl(value), y(value))
+    case (x, Val.Lam(_, cl)) =>
+      val value = Val.Var(envLen)
+      unify(envLen + 1, x(value), cl(value))
+    case (Val.Pi(_, ty1, cl1), Val.Pi(_, ty2, cl2)) =>
+      val value = Val.Var(envLen)
+      unify(envLen, ty1, ty2)
+      unify(
+        envLen + 1,
+        cl1(value),
+        cl2(value)
+      )
+    case _ => throw new Exception(s"unable to unify $x and $y")
 
 def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
   case Raw.U =>
@@ -241,7 +247,7 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
     (Term.Var(ctx.envLen - ctx.getLevel(name) - 1), ctx.getType(name))
   case Raw.App(func, arg) =>
     val (funcTerm, funcType) = infer(ctx, func)
-    // func type could be determined
+    // update value before pattern matching
     funcType.force match
       case Val.Pi(_, ty, cl) =>
         val argTerm = check(ctx, arg, ty)
@@ -249,7 +255,11 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
       case _ =>
         throw new Exception(s"$func is not a function")
   case Raw.Lam(param, body) =>
-    throw new Exception(s"type of \\$param => $body can't be inferred")
+    // treat \x. t as \(x: _). t
+    val metaVal = eval(ctx.env, Meta.fresh)
+    val (bodyTerm, bodyType) = infer(ctx.add(param, metaVal), body)
+    val tyClosure = Closure(ctx.env, quote(ctx.envLen + 1, bodyType))
+    (Term.Lam(param, bodyTerm), Val.Pi(param, metaVal, tyClosure))
   case Raw.Pi(param, ty, body) =>
     val tyTerm = check(ctx, ty, Val.U)
     val tyVal = eval(ctx.env, tyTerm)
