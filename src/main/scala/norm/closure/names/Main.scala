@@ -1,9 +1,12 @@
+// Use closure to prevent storing functions in data
 package norm.closure.names
 
 type Name = String
 type Env = Map[Name, Val]
 
+// in context `env`, \param. body
 case class Closure(param: Name, env: Env, body: Term):
+  // construct the context of `body` (env + (param -> arg)) and evaluate it
   def apply(arg: Val): Val = eval(env + (param -> arg), body)
 
 enum Term:
@@ -21,10 +24,10 @@ enum Val:
     case Lam(cl) => cl(u)
     case t       => App(t, u)
 
-def fresh(ns: List[Name], x: Name): Name = x match
-  case "_"                 => "_"
-  case _ if ns.contains(x) => fresh(ns, x + "'")
-  case _                   => x
+def fresh(env: List[Name], x: Name): Name = x match
+  case "_"                  => "_"
+  case _ if env.contains(x) => fresh(env, x + "'")
+  case _                    => x
 
 def eval(env: Env, tm: Term): Val = tm match
   case Term.Var(name) =>

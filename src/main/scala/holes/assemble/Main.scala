@@ -1,3 +1,4 @@
+// Old `Env` and `Cxt` are merged into `Ctx`.
 package holes.assemble
 
 type Name = String
@@ -5,9 +6,6 @@ type Env = List[Val]
 type Types = List[Val]
 type Index = Int
 type Level = Int
-
-// from `typecheck.closure.debruijn` to `holes.assemble`,
-// the only change is that old `Env` and `Cxt` are merged into `Ctx`.
 
 case class Ctx(
     env: Env,

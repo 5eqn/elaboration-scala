@@ -1,3 +1,4 @@
+// Closure is added.
 package typecheck.closure.names
 
 type Name = String

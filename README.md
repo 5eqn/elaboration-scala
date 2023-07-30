@@ -2,6 +2,17 @@
 
 [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo) partially rewritten with Scala3.
 
+## Major Differences
+
+- Difficulty curve of mine is not as steep as the original
+    - The original project implements Holes in one go, but I separated it to four parts
+    - There's a variety of tests running the code from different aspects
+        - You can even see de-Bruijn indexes in tests
+        - Parser is also implemented in Scala3
+- I made less documentation and references, for that please refer to the original
+- I try to write idiomatic Scala3 code instead of solely adhering to the original
+    - Using Singleton when implementing Meta is much more convenient
+
 ## Fun fact
 
 This project is rewritten from memory, when something goes wrong, I refer to original elaboration-zoo to spot the mistake. Here are some mistakes that I've made (and of course fixed):
@@ -14,10 +25,14 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - did not check eta conversion
 - In `(x : A) -> ?`, `A` can't include `x`, but I mistakenly assigned a de-bruijn index when writting tests
 - When generating `Term` in bidirectional elaboration, I made the context wrong in `Let` and `Lam`.
+- I forgot to force some values when implementing holes
+- I ignored the fact that let-bound variables exist in `env` as complicated objects, partial renaming shouldn't fail on these
+- I forgot to update the solved meta to memory (literally)
 
 Here are some of my unclear points:
 
 - In elaboration-zoo, `check` checks `Let` separately, is this necessary?
+    - Current tests all pass, btw
 
 ## Run Tests
 
@@ -27,13 +42,28 @@ Simply run:
 sbt test
 ```
 
+You can also change the test sources to see failed cases!
+
 ## Difficulty Order
 
+Personal ratings are decided by deltas, i.e. the difficulty of `norm.closure.names` means how hard it is to understand `norm.closure.names` **after** learning `norm.hoas.names`, not the overall difficulty. That's why you'll see some latter parts have less difficulty compared to former parts.
+
+More stars, more difficult. Difficulty no more than 5* is acceptable.
+
 1. norm
-    1. norm.hoas.names
-    2. norm.closure.names
-    3. norm.closure.debruijn
+    1. norm.hoas.names (3*)
+    2. norm.closure.names (2*)
+    3. norm.closure.debruijn (4*)
 2. typecheck
-    1. typecheck.hoas.names
-    2. typecheck.closure.names
-    3. typecheck.closure.debruijn
+    1. typecheck.hoas.names (5*)
+    2. typecheck.closure.names (1*)
+    3. typecheck.closure.debruijn (1*)
+3. holes
+    1. holes.assemble (1*)
+    2. holes.spine (2*)
+    3. holes.renaming (3*)
+    4. holes.meta (5*)
+
+## Contribution
+
+As I'm a beginner, I make mistakes. If you found one, submitting Issue or Pull Request is greatly welcomed!

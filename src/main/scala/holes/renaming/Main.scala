@@ -1,15 +1,13 @@
-// `Val` now features `Spine`.
-package holes.spine
+// `PartialRenaming` and associated functions are added.
+package holes.renaming
 
 type Name = String
 type Env = List[Val]
 type Types = List[Val]
+type Spine = List[Val]
+
 type Index = Int
 type Level = Int
-
-// Spine means "parameter list".
-// List in Scala3 is right-folded, (z, (y, x)) means "? x y z"
-type Spine = List[Val]
 
 case class Ctx(
     env: Env,
@@ -34,6 +32,13 @@ object Ctx {
 
 case class Closure(env: Env, body: Term):
   def apply(arg: Val): Val = eval(arg :: env, body)
+
+// cod: codomain length, outer context
+// dom: domain length, context inside lambda
+// map: map from codomain to domain
+case class PartialRenaming(cod: Level, dom: Level, map: Map[Int, Level]):
+  def lift: PartialRenaming =
+    PartialRenaming(cod + 1, dom + 1, map + (cod -> dom))
 
 enum Raw:
   case U
@@ -84,8 +89,8 @@ def quote(envLen: Level, x: Val): Term = x match
   case Val.U =>
     Term.U
   case Val.Rigid(level, spine) =>
-    spine.foldRight(Term.Var(envLen - level - 1))((value, tm) =>
-      Term.App(tm, quote(envLen, value))
+    spine.foldRight(Term.Var(envLen - level - 1))((value, term) =>
+      Term.App(term, quote(envLen, value))
     )
   case Val.Lam(param, cl) =>
     Term.Lam(param, quote(envLen + 1, cl(Val.Var(envLen))))
@@ -95,6 +100,44 @@ def quote(envLen: Level, x: Val): Term = x match
       quote(envLen, ty),
       quote(envLen + 1, cl(Val.Var(envLen)))
     )
+
+// convert a spine to a partial renaming,
+// that renames the spine to lambda-bound variables (x1, x2...)
+def invert(envLen: Level, spine: Spine): PartialRenaming =
+  spine.foldRight(PartialRenaming(envLen, 0, Map()))((value, pr) =>
+    value match
+      case Val.Rigid(level, List()) =>
+        PartialRenaming(pr.cod, pr.dom + 1, pr.map + (level -> pr.dom))
+      case _ => throw new Exception("elaboration error")
+  )
+
+// Apply a renaming to a value, returns the renamed term
+def rename(pr: PartialRenaming, value: Val): Term =
+  value match
+    case Val.U =>
+      Term.U
+    case Val.Rigid(level, spine) =>
+      spine.foldRight(Term.Var(pr.dom - pr.map(level) - 1))((value, term) =>
+        Term.App(term, rename(pr, value))
+      )
+    case Val.Lam(param, cl) =>
+      Term.Lam(param, rename(pr.lift, cl(Val.Var(pr.cod))))
+    case Val.Pi(param, ty, cl) =>
+      Term.Pi(
+        param,
+        rename(pr, ty),
+        rename(pr.lift, cl(Val.Var(pr.cod)))
+      )
+
+// wrap term in envLen count of lambdas
+def lams(envLen: Level, tm: Term): Term =
+  (0 until envLen).foldRight(tm)((lvl, term) => Term.Lam("x" + lvl, term))
+
+// Solve Γ |- ?a sp = rhs
+def solve(envLen: Level, sp: Spine, rhs: Val): Val =
+  val pr = invert(envLen, sp)
+  val tm = rename(pr, rhs)
+  eval(List(), lams(pr.dom, tm))
 
 def conv(envLen: Level, x: Val, y: Val): Boolean = (x, y) match
   case (Val.U, Val.U) =>

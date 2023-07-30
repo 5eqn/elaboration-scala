@@ -1,3 +1,4 @@
+// de-Bruijn index is added.
 package typecheck.closure.debruijn
 
 type Name = String

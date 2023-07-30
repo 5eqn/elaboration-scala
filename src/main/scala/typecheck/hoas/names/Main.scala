@@ -1,3 +1,4 @@
+// Typecheck is added.
 package typecheck.hoas.names
 
 type Name = String
@@ -5,10 +6,12 @@ type Env = Map[Name, Val]
 type Cxt = Map[Name, Val]
 
 enum Term:
+  // U
   case U
   case Var(name: Name)
   case App(func: Term, arg: Term)
   case Lam(param: Name, body: Term)
+  // (param : ty) -> body
   case Pi(param: Name, ty: Term, body: Term)
   case Let(name: Name, ty: Term, body: Term, next: Term)
 
@@ -17,16 +20,17 @@ enum Val:
   case Var(name: Name)
   case App(func: Val, arg: Val)
   case Lam(param: Name, value: Val => Val)
+  // (param : ty) -> body, value == \param. body
   case Pi(param: Name, ty: Val, value: Val => Val)
 
   def apply(u: Val): Val = this match
     case Lam(_, t) => t(u)
     case t         => App(t, u)
 
-def fresh(ns: List[Name], x: Name): Name = x match
-  case "_"                 => "_"
-  case _ if ns.contains(x) => fresh(ns, x + "'")
-  case _                   => x
+def fresh(env: List[Name], x: Name): Name = x match
+  case "_"                  => "_"
+  case _ if env.contains(x) => fresh(env, x + "'")
+  case _                    => x
 
 def eval(env: Env, tm: Term): Val = tm match
   case Term.U =>
@@ -56,6 +60,7 @@ def quote(ns: List[Name], x: Val): Term = x match
     val name = fresh(ns, param)
     Term.Pi(name, quote(ns, ty), quote(name :: ns, value(Val.Var(name))))
 
+// check eta equivalence
 def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
   case (Val.U, Val.U) =>
     true
@@ -63,18 +68,14 @@ def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
     x == y
   case (Val.App(x1, x2), Val.App(y1, y2)) =>
     conv(env, x1, y1) && conv(env, x2, y2)
-  case (Val.Lam(x1, x2), Val.Lam(y1, y2)) =>
-    val name = fresh(env.keys.toList, x1);
-    val value = Val.Var(name)
-    conv(env + (name -> value), x2(value), y2(value))
   case (Val.Lam(x1, x2), y) =>
     val name = fresh(env.keys.toList, x1)
     val value = Val.Var(name)
-    conv(env + (name -> value), x2(value), Val.App(y, value))
+    conv(env + (name -> value), x2(value), y(value))
   case (x, Val.Lam(y1, y2)) =>
     val name = fresh(env.keys.toList, y1)
     val value = Val.Var(name)
-    conv(env + (name -> value), Val.App(x, value), y2(value))
+    conv(env + (name -> value), x(value), y2(value))
   case (Val.Pi(x1, x2, x3), Val.Pi(y1, y2, y3)) =>
     val name = fresh(env.keys.toList, x1)
     val value = Val.Var(name)
@@ -82,6 +83,7 @@ def conv(env: Env, x: Val, y: Val): Boolean = (x, y) match
   case _ =>
     false
 
+// infer type (Val) of tm (Term)
 def infer(env: Env, cxt: Cxt, tm: Term): Val = tm match
   case Term.U =>
     Val.U
@@ -115,6 +117,7 @@ def infer(env: Env, cxt: Cxt, tm: Term): Val = tm match
       else throw new Exception(s"$body is not of type $valTy")
     else throw new Exception(s"$ty is not a type")
 
+// check if tm (Term) has type ty (Val)
 def check(env: Env, cxt: Cxt, tm: Term, ty: Val): Boolean = (tm, ty) match
   case (Term.Lam(param, body), Val.Pi(param1, ty1, body1)) =>
     val value = Val.Var(fresh(env.keys.toList, param))
