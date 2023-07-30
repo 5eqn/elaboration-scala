@@ -58,7 +58,8 @@ enum Val:
   case Pi(param: Name, ty: Val, cl: Closure)
 
   def apply(u: Val): Val = this match
-    case Lam(param, cl)      => cl(u)
+    case Lam(param, cl) => cl(u)
+    // just append parameter `u` to spine
     case Rigid(level, spine) => Rigid(level, u :: spine)
     case _                   => throw new Exception("impossible")
 
@@ -84,6 +85,7 @@ def quote(envLen: Level, x: Val): Term = x match
   case Val.U =>
     Term.U
   case Val.Rigid(level, spine) =>
+    // foldRight on spine is equivalent to recursing
     spine.foldRight(Term.Var(envLen - level - 1))((value, tm) =>
       Term.App(tm, quote(envLen, value))
     )
@@ -100,6 +102,7 @@ def conv(envLen: Level, x: Val, y: Val): Boolean = (x, y) match
   case (Val.U, Val.U) =>
     true
   case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
+    // compare spines by foldRight too
     x == y && spx
       .foldRight((spy, true))((vx, pair) =>
         val (spy, res) = pair
