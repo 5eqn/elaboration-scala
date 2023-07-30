@@ -90,7 +90,8 @@ enum Val:
   def apply(u: Val): Val = this match
     case Lam(param, cl)      => cl(u)
     case Rigid(level, spine) => Rigid(level, u :: spine)
-    // append to spine like rigid case
+    // parallel to the Rigid case
+    // similar cases after this will not be commented
     case Flex(metaID, spine) => Flex(metaID, u :: spine)
     case _                   => throw new Exception("impossible")
 
@@ -107,7 +108,6 @@ enum Val:
 
 object Val:
   def Var(level: Level): Val = Rigid(level, List())
-  // fast meta creation like Rigid one
   def Meta(metaID: MetaID): Val = Flex(metaID, List())
 
 def eval(env: Env, tm: Term): Val = tm match
@@ -130,16 +130,16 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.Let(name, ty, body, next) =>
     eval(eval(env, body) :: env, next)
 
-// update x first
 def quote(envLen: Level, x: Val): Term =
   val quoteSp = (spine: Spine, initialTerm: Term) =>
     spine.foldRight(initialTerm)((value, term) =>
       Term.App(term, quote(envLen, value))
     )
+  // before value is pattern matched, we need to force it to WHNF
+  // similar cases after this will not be commented
   x.force match
     case Val.U =>
       Term.U
-    // similar to the Rigid case
     case Val.Flex(metaID, spine) =>
       quoteSp(spine, Term.Meta(metaID))
     case Val.Rigid(level, spine) =>
@@ -155,7 +155,6 @@ def quote(envLen: Level, x: Val): Term =
 
 def invert(envLen: Level, spine: Spine): PartialRenaming =
   spine.foldRight(PartialRenaming(envLen, 0, Map()))((value, pr) =>
-    // get the latest meta solution
     value.force match
       case Val.Rigid(level, List()) =>
         PartialRenaming(pr.cod, pr.dom + 1, pr.map + (level -> pr.dom))
@@ -166,7 +165,6 @@ def invert(envLen: Level, spine: Spine): PartialRenaming =
         PartialRenaming(pr.cod, pr.dom + 1, pr.map)
   )
 
-// update value first
 def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
   val renameSp = (spine: Spine, initialTerm: Term) =>
     spine.foldRight(initialTerm)((value, term) =>
@@ -190,7 +188,7 @@ def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
         rename(lhs, pr.lift, cl(pr.nextCod))
       )
 
-// due to occurence check, ID of renamed meta should be provided
+// due to occurence check, ID of lhs meta should be provided
 def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
   val pr = invert(envLen, sp)
   val tm = rename(lhs, pr, rhs)
@@ -202,7 +200,6 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
     )
   )
 
-// force parameters so that metas are not re-solved
 def unify(envLen: Level, x: Val, y: Val): Unit =
   val unifySp = (x: Spine, y: Spine) =>
     x.foldRight(y)((vx, y) =>
@@ -218,7 +215,7 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
     case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
       if x != y then throw new Exception(s"rigid root differs: $x != $y")
       else unifySp(spx, spy)
-    // when unifying, try to solve meta
+    // when unifying ?a spine = rhs, try to solve ?a
     case (Val.Flex(id, spine), y) => solve(id, envLen, spine, y)
     case (x, Val.Flex(id, spine)) => solve(id, envLen, spine, x)
     case (Val.Lam(_, cl), y) =>
@@ -247,7 +244,6 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
     (Term.Var(ctx.envLen - ctx.getLevel(name) - 1), ctx.getType(name))
   case Raw.App(func, arg) =>
     val (funcTerm, funcType) = infer(ctx, func)
-    // update value before pattern matching
     funcType.force match
       case Val.Pi(_, ty, cl) =>
         val argTerm = check(ctx, arg, ty)
@@ -256,6 +252,7 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
         throw new Exception(s"$func is not a function")
   case Raw.Lam(param, body) =>
     // treat \x. t as \(x: _). t
+    // so that type of lambdas can be inferred
     val metaVal = eval(ctx.env, Meta.fresh)
     val (bodyTerm, bodyType) = infer(ctx.add(param, metaVal), body)
     val tyClosure = Closure(ctx.env, quote(ctx.envLen + 1, bodyType))
@@ -273,9 +270,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
     val (nextTerm, nextTy) = infer(ctx.add(name, bodyVal, tyVal), next)
     (Term.Let(name, tyTerm, bodyTerm, nextTerm), nextTy)
 
-// desired type could be determined
 def check(ctx: Ctx, tm: Raw, ty: Val): Term = (tm, ty.force) match
-  // hole can be of any type, but it's a inserted meta, ?0 spine : Any
+  // hole is a inserted meta, ?0 spine : Any
   case (Raw.Hole, _) =>
     Meta.fresh
   case (Raw.Lam(param, body), Val.Pi(_, ty, cl)) =>
