@@ -102,9 +102,13 @@ def conv(envLen: Level, x: Val, y: Val): Boolean = (x, y) match
   case (Val.U, Val.U) =>
     true
   case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
-    // compare spines by foldRight too
+    // compare spines by foldLeft!
+    // This may seem unintuitive, but recall that
+    // foldLeft process the leftmost param first,
+    // and spy gets consumed as it processes,
+    // so it make sense to use foldLeft.
     x == y && spx
-      .foldRight((spy, true))((vx, pair) =>
+      .foldLeft((spy, true))((pair, vx) =>
         val (spy, res) = pair
         spy match
           case vy :: rem => (rem, res && conv(envLen, vx, vy))

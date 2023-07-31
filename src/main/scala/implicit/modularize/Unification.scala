@@ -49,7 +49,7 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
 
 def unify(envLen: Level, x: Val, y: Val): Unit =
   val unifySp = (x: Spine, y: Spine) =>
-    x.foldRight(y)((vx, y) =>
+    x.foldLeft(y)((y, vx) =>
       y match
         case vy :: rem => unify(envLen, vx, vy); rem
         case _         => throw new Exception("spine length differs")

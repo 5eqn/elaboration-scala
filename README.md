@@ -2,6 +2,12 @@
 
 [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo) partially rewritten with Scala3.
 
+## Comment Logic
+
+In each file, important differences from the previous one are commented.
+
+For example, in `implicit.insert`, `Elaboration.scala` is the only file that has comment, which means the other files remain unchanged relative to the previous chapter `implicit.model`.
+
 ## Major Differences
 
 - Difficulty curve of mine is not as steep as the original
@@ -10,6 +16,10 @@
         - You can even see de-Bruijn indexes in tests
         - Parser is also implemented in Scala3
 - I made less documentation and references, for that please refer to the original
+- I made certain implementation simpler
+    - In metas, I didn't filter defined variables
+    - In implicit, I use "?" prefix instead of env masking to ensure variable names don't collide
+    - I didn't allow implicit lambda generating, where `a : A, b : B, a b` gets elaborated to `(\_. a) b`
 - I try to write idiomatic Scala3 code instead of solely adhering to the original
     - Using Singleton when implementing Meta is much more convenient
 
@@ -30,6 +40,10 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - I forgot to update the solved meta to memory (literally)
 - I forgot to check if lhs and rhs are both meta first in `unify`
 - I forgot to enable checking type of lambdas
+- I forgot to insert implicit arguments when checking type of implicit function against explicit Pi type
+- I forgot to make sure name of inserted variable doesn't collide with existing ones
+- I forgot to recurse insert function
+- When implementing spine comparison, I mistakenly use foldRight
 
 Here are some of my unclear points:
 
@@ -68,8 +82,8 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
 4. implicit
     1. implicit.modularize (1*)
     2. implicit.model (3*)
-    3. implicit.insert (4*)
-    4. implicit.check (5*)
+    3. implicit.insert (5*)
+    4. implicit.named (4*)
 
 ## Contribution
 

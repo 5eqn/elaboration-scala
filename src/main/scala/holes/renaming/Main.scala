@@ -144,7 +144,7 @@ def conv(envLen: Level, x: Val, y: Val): Boolean = (x, y) match
     true
   case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
     x == y && spx
-      .foldRight((spy, true))((vx, pair) =>
+      .foldLeft((spy, true))((pair, vx) =>
         val (spy, res) = pair
         spy match
           case vy :: rem => (rem, res && conv(envLen, vx, vy))

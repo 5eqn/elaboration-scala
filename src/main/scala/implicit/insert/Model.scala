@@ -1,4 +1,4 @@
-package `implicit`.model
+package `implicit`.insert
 
 type Name = String
 type Index = Int
@@ -7,13 +7,10 @@ type Env = List[Val]
 type Spine = List[Param]
 
 object Spine:
-  // function that converts env to spine
-  // now spine consists of `Param`s with explicit or implicit tag
   def apply(env: Env): Spine =
     env.map(value => Param(value, Icit.Expl))
 
 case class Param(value: Val, icit: Icit):
-  // force the value of param
   def force: Param = Param(value.force, icit)
 
 enum Icit:
@@ -21,11 +18,8 @@ enum Icit:
   case Impl
 
 enum Dst:
-  // explicit application, f A
   case Expl
-  // implicit position-based application, f {A}
   case ImplAuto
-  // implicit name-base application f {Ty = A}
   case ImplBind(to: Name)
 
   def icit: Icit = this match
@@ -34,11 +28,8 @@ enum Dst:
     case ImplBind(_) => Icit.Impl
 
 enum Src:
-  // explicit lambda, \x. x
   case Expl
-  // implicit lambda with consistent names, \{x}. x
   case ImplAuto
-  // implicit lambda with renaming, \{x = y}. y
   case ImplBind(from: Name)
 
   def icit: Icit = this match
@@ -73,7 +64,6 @@ enum Val:
   case Pi(param: Name, ty: Val, cl: Closure, icit: Icit)
 
   def apply(u: Param): Val = this match
-    // don't ensure icit consistency here, but why?
     case Lam(param, cl, _)   => cl(u.value)
     case Rigid(level, spine) => Rigid(level, u :: spine)
     case Flex(metaID, spine) => Flex(metaID, u :: spine)
