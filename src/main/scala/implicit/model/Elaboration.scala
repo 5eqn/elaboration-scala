@@ -9,6 +9,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
     (Term.Var(ctx.envLen - ctx.getLevel(name) - 1), ctx.getType(name))
   case Raw.App(func, arg, dst) =>
     // elaborate in later chapters
+    // note how icit is passed passively,
+    // there will be more similar cases afterwards
     val i = dst.icit
     val (funcTerm, funcType) = infer(ctx, func)
     funcType.force match
@@ -20,8 +22,7 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
       case _ =>
         throw new Exception(s"$func is not a function")
   case Raw.Lam(param, body, src) =>
-    // pass icit passively
-    // there will be more similar cases afterwards
+    // elaborate in later chapters
     val i = src.icit
     val metaVal = eval(ctx.env, Meta.fresh)
     val (bodyTerm, bodyType) = infer(ctx.add(param, metaVal), body)

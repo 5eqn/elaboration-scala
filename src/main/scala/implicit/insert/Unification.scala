@@ -1,4 +1,4 @@
-package `implicit`.model
+package `implicit`.insert
 
 case class PartialRenaming(cod: Level, dom: Level, map: Map[Int, Level]):
   def lift: PartialRenaming =
@@ -16,8 +16,6 @@ def invert(envLen: Level, spine: Spine): PartialRenaming =
 
 def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
   val renameSp = (spine: Spine, initialTerm: Term) =>
-    // similar to `quote`, icit is passed here
-    // there will be multiple similar cases afterwards
     spine.foldRight(initialTerm)((param, term) =>
       Term.App(term, rename(lhs, pr, param.value), param.icit)
     )
@@ -46,8 +44,6 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
     lhs,
     eval(
       List(),
-      // use explicit lambdas here
-      // note how `eval` converts `env` to explicit spine
       sp.foldRight((tm, 0))((param, pair) =>
         val (term, lvl) = pair
         (Term.Lam("x" + lvl, term, param.icit), lvl + 1)
@@ -79,7 +75,6 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
       val value = Val.Var(envLen)
       unify(envLen + 1, x(Param(value, i)), cl(value))
     case (Val.Pi(_, ty1, cl1, i1), Val.Pi(_, ty2, cl2, i2)) =>
-      // check icit when unifying
       if i1 != i2 then throw new Exception(s"icit differs: $i1 != $i2")
       val value = Val.Var(envLen)
       unify(envLen, ty1, ty2)
