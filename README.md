@@ -83,7 +83,7 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     1. implicit.modularize (1*)
     2. implicit.model (3*)
     3. implicit.insert (5*)
-    4. implicit.named (4*)
+    4. implicit.named (3*)
 
 ## Contribution
 
