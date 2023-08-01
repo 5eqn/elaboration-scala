@@ -13,8 +13,13 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
       case Val.Pi(_, ty, cl) =>
         val argTerm = check(ctx, arg, ty)
         (Term.App(funcTerm, argTerm), cl(eval(ctx.env, argTerm)))
-      case _ =>
-        throw new Exception(s"$func is not a function")
+      case ty =>
+        val argTy = eval(ctx.env, Meta.fresh)
+        val tmplCl = Closure(ctx.env, Meta.fresh)
+        val tmplTy = Val.Pi("x", argTy, tmplCl)
+        unify(ctx.envLen, ty, tmplTy)
+        val argTerm = check(ctx, arg, argTy)
+        (Term.App(funcTerm, argTerm), tmplCl(eval(ctx.env, argTerm)))
   case Raw.Lam(param, body) =>
     val metaVal = eval(ctx.env, Meta.fresh)
     val (bodyTerm, bodyType) = infer(ctx.add(param, metaVal), body)

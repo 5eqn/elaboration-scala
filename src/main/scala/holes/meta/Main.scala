@@ -248,8 +248,16 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
       case Val.Pi(_, ty, cl) =>
         val argTerm = check(ctx, arg, ty)
         (Term.App(funcTerm, argTerm), cl(eval(ctx.env, argTerm)))
-      case _ =>
-        throw new Exception(s"$func is not a function")
+      case ty =>
+        // attempt to unify type of func to ?0 -> ?1
+        // this way, if func : ?m, we get ?m = ?0 -> ?1
+        // however if func is rigid, we get a unification error
+        val argTy = eval(ctx.env, Meta.fresh)
+        val tmplCl = Closure(ctx.env, Meta.fresh)
+        val tmplTy = Val.Pi("x", argTy, tmplCl)
+        unify(ctx.envLen, ty, tmplTy)
+        val argTerm = check(ctx, arg, argTy)
+        (Term.App(funcTerm, argTerm), tmplCl(eval(ctx.env, argTerm)))
   case Raw.Lam(param, body) =>
     // treat \x. t as \(x: _). t
     // so that type of lambdas can be inferred
