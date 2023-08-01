@@ -10,8 +10,10 @@ type Level = Int
 case class Closure(env: Env, body: Term):
   def apply(arg: Val): Val = eval(arg :: env, body)
 
+// surface syntax, consistent with previous `Term`
 enum Raw:
   case U
+  // still use name here
   case Var(name: Name)
   case App(func: Raw, arg: Raw)
   case Lam(param: Name, body: Raw)
@@ -20,8 +22,11 @@ enum Raw:
 
 enum Term:
   case U
+  // store de-Bruijn index here
   case Var(index: Index)
   case App(func: Term, arg: Term)
+  // param names are still stored
+  // for now they have no use, until named implicit arguments
   case Lam(param: Name, body: Term)
   case Pi(param: Name, ty: Term, body: Term)
   case Let(name: Name, ty: Term, body: Term, next: Term)
@@ -90,6 +95,8 @@ def conv(envLen: Level, x: Val, y: Val): Boolean = (x, y) match
   case _ =>
     false
 
+// former infer is Term -> Val, as surface syntax exist,
+// we extend the function to Raw -> (Term, Val)
 def infer(env: Env, cxt: Cxt, tm: Raw): (Term, Val) = tm match
   case Raw.U =>
     (Term.U, Val.U)
@@ -122,6 +129,8 @@ def infer(env: Env, cxt: Cxt, tm: Raw): (Term, Val) = tm match
     val (nextTerm, nextTy) = infer(newEnv, newCxt, next)
     (Term.Let(name, tyTerm, bodyTerm, nextTerm), nextTy)
 
+// former check is Term -> Val -> Boolean, for similar reason
+// we extend the function to Raw -> Val -> Term
 def check(env: Env, cxt: Cxt, tm: Raw, ty: Val): Term = (tm, ty) match
   case (Raw.Lam(param, body), Val.Pi(_, ty, cl)) =>
     val level = env.length
