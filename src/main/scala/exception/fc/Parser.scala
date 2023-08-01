@@ -1,11 +1,10 @@
 package exception.fc
 
 import scala.util.parsing.combinator.{Parsers, RegexParsers}
-import scala.util.parsing.input.{Positional, CharSequenceReader}
+import scala.util.parsing.input.CharSequenceReader
 import scala.language.postfixOps
 
 object ScalaParser extends RegexParsers {
-  // lexers
   def ws: Parser[Unit] = ("""\s*""".r ^^^ ()) ~> comment
   def comment: Parser[Unit] = (("--.*".r ^^^ ()) ~> ws | success(()))
   def lexeme[A](p: Parser[A]): Parser[A] = p <~ ws
@@ -25,7 +24,7 @@ object ScalaParser extends RegexParsers {
     not("""[a-zA-Z0-9_]""".r) | ws
   }
 
-  // atom
+  // adding `positioned` is enough!
   def pAtom: Parser[Raw] = positioned(
     pIdent ^^ Raw.Var.apply |
       symbol("U") ^^^ Raw.U |
@@ -33,7 +32,6 @@ object ScalaParser extends RegexParsers {
       parens(pRaw)
   )
 
-  // arg
   def pDstImplBind = for {
     x <- "{" ~> pIdent <~ "="
     t <- pRaw <~ "}"
@@ -46,8 +44,6 @@ object ScalaParser extends RegexParsers {
     t <- pAtom
   } yield (t, Dst.Expl)
   def pArg: Parser[(Raw, Dst)] = pDstImplBind | pDstImplAuto | pDstExpl
-
-  // spine
   def pSpine: Parser[Raw] = positioned(for {
     atom <- pAtom
     args <- rep(pArg)
@@ -55,7 +51,6 @@ object ScalaParser extends RegexParsers {
     Raw.App(func, arg, dst)
   })
 
-  // src
   def pSrcImplBind = for {
     x <- "{" ~> pIdent <~ "="
     t <- pBind <~ "}"
@@ -64,8 +59,6 @@ object ScalaParser extends RegexParsers {
     t <- "{" ~> pBind <~ "}"
   } yield (t, Src.ImplAuto)
   def pSrcExpl = pBind ^^ ((_, Src.Expl))
-
-  // lam
   def pLamBinder = pSrcImplBind | pSrcImplAuto | pSrcExpl
   def pLam: Parser[Raw] = positioned(for {
     _ <- char('λ') | char('\\')
@@ -74,7 +67,6 @@ object ScalaParser extends RegexParsers {
     t <- pRaw
   } yield xs.foldRight(t)((param, rest) => Raw.Lam(param._1, rest, param._2)))
 
-  // pi
   def pPiExpl = parens(rep1(pBind) ~ (char(':') ~> pRaw)) ~ success(Icit.Expl)
   def pPiImpl = braces(rep1(pBind) ~ (char(':') ~> pRaw)) ~ success(Icit.Impl)
   def pPiImplAuto = braces(rep1(pBind) ~ success(Raw.Hole)) ~ success(Icit.Impl)
@@ -93,19 +85,15 @@ object ScalaParser extends RegexParsers {
     }
   })
 
-  // let
   def pLet: Parser[Raw] = positioned(for {
     x <- pKeyword("let") ~> pIdent
     a <- opt(symbol(":") ~> pRaw)
     t <- symbol("=") ~> pRaw
     u <- symbol(";") ~> pRaw
   } yield Raw.Let(x, a.getOrElse(Raw.Hole), t, u))
-
-  // combined
   def pRaw: Parser[Raw] = pLam | pLet | pPi | funOrSpine
   def pSrc: Parser[Raw] = ws ~> pRaw <~ """\z""".r
 
-  // main function to parse input
   def parseInput(input: String): Raw =
     parse(pSrc, new CharSequenceReader(input)) match
       case Success(result, next) =>
