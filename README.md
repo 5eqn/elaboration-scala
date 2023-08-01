@@ -63,7 +63,7 @@ You can also change the test sources to see failed cases!
 
 ## Difficulty Order
 
-Personal ratings are decided by deltas, i.e. the difficulty of `norm.closure.names` means how hard it is to understand `norm.closure.names` **after** learning `norm.hoas.names`, not the overall difficulty. That's why you'll see some latter parts have less difficulty compared to former parts.
+Personal ratings are decided by deltas, i.e. the difficulty of `norm.closure.names` means how hard it is to understand `norm.closure.names` *after* learning `norm.hoas.names`, not the overall difficulty. That's why you'll see some latter parts have less difficulty compared to former parts.
 
 More stars, more difficult. Difficulty no more than 5* is acceptable.
 
