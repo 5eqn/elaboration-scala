@@ -19,8 +19,13 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
         if i != j then throw new Exception(s"icit inconsistency when app $i")
         val argTerm = check(ctx, arg, ty)
         (Term.App(funcTerm, argTerm, i), cl(eval(ctx.env, argTerm)))
-      case _ =>
-        throw new Exception(s"$func is not a function")
+      case ty =>
+        val argTy = eval(ctx.env, Meta.fresh)
+        val tmplCl = Closure(ctx.env, Meta.fresh)
+        val tmplTy = Val.Pi("x", argTy, tmplCl, i)
+        unify(ctx.envLen, ty, tmplTy)
+        val argTerm = check(ctx, arg, argTy)
+        (Term.App(funcTerm, argTerm, i), tmplCl(eval(ctx.env, argTerm)))
   case Raw.Lam(param, body, src) =>
     // elaborate in later chapters
     val i = src.icit

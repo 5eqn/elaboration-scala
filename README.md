@@ -19,7 +19,6 @@ For example, in `implicit.insert`, `Elaboration.scala` is the only file that has
 - I made certain implementation simpler
     - In metas, I didn't filter defined variables
     - In implicit, I use "?" prefix instead of env masking to ensure variable names don't collide
-    - I didn't allow implicit lambda generating, where `a : A, b : B, a b` gets elaborated to `(\_. a) b`
 - I try to write idiomatic Scala3 code instead of solely adhering to the original
     - Using Singleton when implementing Meta is much more convenient
 
@@ -44,6 +43,8 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - I forgot to make sure name of inserted variable doesn't collide with existing ones
 - I forgot to recurse insert function
 - When implementing spine comparison, I mistakenly use foldRight
+- When inferring type of function application, when the function's type is meta, I forgot to attempt to unify it with `?0 -> ?1`
+    - However, no tests will fail without this
 
 Here are some of my unclear points:
 
