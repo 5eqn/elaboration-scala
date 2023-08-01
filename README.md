@@ -21,6 +21,8 @@ For example, in `implicit.insert`, `Elaboration.scala` is the only file that has
     - In implicit, I use "?" prefix instead of env masking to ensure variable names don't collide
 - I try to write idiomatic Scala3 code instead of solely adhering to the original
     - Using Singleton when implementing Meta is much more convenient
+- I added modules that I enjoy but not necessarily relate to typechecking
+    - e.g. Pretty Exceptions
 
 ## Fun fact
 
@@ -67,24 +69,26 @@ Personal ratings are decided by deltas, i.e. the difficulty of `norm.closure.nam
 
 More stars, more difficult. Difficulty no more than 5* is acceptable.
 
-1. norm
+1. Normalization
     1. norm.hoas.names (3*)
     2. norm.closure.names (2*)
     3. norm.closure.debruijn (4*)
-2. typecheck
+2. MLTT Typecheck
     1. typecheck.hoas.names (4*)
     2. typecheck.closure.names (1*)
     3. typecheck.closure.debruijn (3*)
-3. holes
+3. Holes
     1. holes.assemble (1*)
     2. holes.spine (3*)
     3. holes.renaming (4*)
     4. holes.meta (5*)
-4. implicit
+4. Implicit Arguments
     1. implicit.modularize (1*)
     2. implicit.model (3*)
     3. implicit.insert (5*)
     4. implicit.named (3*)
+5. Pretty Exceptions
+    1. exception.fc (5*)
 
 ## Contribution
 
