@@ -44,7 +44,7 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
     lhs,
     eval(
       List(),
-      sp.foldRight((tm, 0))((param, pair) =>
+      sp.foldLeft((tm, 0))((pair, param) =>
         val (term, lvl) = pair
         (Term.Lam("x" + lvl, term, param.icit), lvl + 1)
       )._1
@@ -60,12 +60,10 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
     )
   (x.force, y.force) match
     case (Val.U, Val.U) =>
-    case (Val.Flex(x, spx), Val.Flex(y, spy)) =>
-      if x != y then throw new Exception(s"flex root differs: $x != $y")
-      else unifySp(spx, spy)
-    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
-      if x != y then throw new Exception(s"rigid root differs: $x != $y")
-      else unifySp(spx, spy)
+    case (Val.Flex(x, spx), Val.Flex(y, spy)) if x == y =>
+      unifySp(spx, spy)
+    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) if x == y =>
+      unifySp(spx, spy)
     case (Val.Flex(id, spine), y) => solve(id, envLen, spine, y)
     case (x, Val.Flex(id, spine)) => solve(id, envLen, spine, x)
     case (Val.Lam(_, cl, i), y) =>

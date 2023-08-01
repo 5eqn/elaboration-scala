@@ -209,12 +209,11 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
     )
   (x.force, y.force) match
     case (Val.U, Val.U) =>
-    case (Val.Flex(x, spx), Val.Flex(y, spy)) =>
-      if x != y then throw new Exception(s"flex root differs: $x != $y")
-      else unifySp(spx, spy)
-    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
-      if x != y then throw new Exception(s"rigid root differs: $x != $y")
-      else unifySp(spx, spy)
+    // if val(spine) has same root, directly compare the spine
+    case (Val.Flex(x, spx), Val.Flex(y, spy)) if x == y =>
+      unifySp(spx, spy)
+    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) if x == y =>
+      unifySp(spx, spy)
     // when unifying ?a spine = rhs, try to solve ?a
     case (Val.Flex(id, spine), y) => solve(id, envLen, spine, y)
     case (x, Val.Flex(id, spine)) => solve(id, envLen, spine, x)
