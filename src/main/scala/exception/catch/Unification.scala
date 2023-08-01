@@ -1,4 +1,4 @@
-package `implicit`.named
+package exception.`catch`
 
 case class PartialRenaming(cod: Level, dom: Level, map: Map[Int, Level]):
   def lift: PartialRenaming =
@@ -23,7 +23,7 @@ def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
     case Val.U =>
       Term.U
     case Val.Flex(rhs, spine) =>
-      if rhs == lhs then throw new Exception(s"$rhs occurs in rhs")
+      if rhs == lhs then throw new Error.IntersectionRename()
       else renameSp(spine, Term.Meta(rhs))
     case Val.Rigid(level, spine) =>
       renameSp(spine, Term.Var(pr.dom - pr.map(level) - 1))
@@ -51,34 +51,40 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
     )
   )
 
-def unify(envLen: Level, x: Val, y: Val): Unit =
-  val unifySp = (x: Spine, y: Spine) =>
-    x.foldLeft(y)((y, vx) =>
-      y match
-        case vy :: rem => unify(envLen, vx.value, vy.value); rem
-        case _         => throw new Exception("spine length differs")
-    )
-  (x.force, y.force) match
-    case (Val.U, Val.U) =>
-    case (Val.Flex(x, spx), Val.Flex(y, spy)) if x == y =>
-      unifySp(spx, spy)
-    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) if x == y =>
-      unifySp(spx, spy)
-    case (Val.Flex(id, spine), y) => solve(id, envLen, spine, y)
-    case (x, Val.Flex(id, spine)) => solve(id, envLen, spine, x)
-    case (Val.Lam(_, cl, i), y) =>
-      val value = Val.Var(envLen)
-      unify(envLen + 1, cl(value), y(Param(value, i)))
-    case (x, Val.Lam(_, cl, i)) =>
-      val value = Val.Var(envLen)
-      unify(envLen + 1, x(Param(value, i)), cl(value))
-    case (Val.Pi(_, ty1, cl1, i1), Val.Pi(_, ty2, cl2, i2)) =>
-      if i1 != i2 then throw new Exception(s"icit differs: $i1 != $i2")
-      val value = Val.Var(envLen)
-      unify(envLen, ty1, ty2)
-      unify(
-        envLen + 1,
-        cl1(value),
-        cl2(value)
+def unify(ctx: Ctx, x: Val, y: Val): Unit =
+  try
+    val unifySp = (spx: Spine, spy: Spine) =>
+      spx.foldLeft(spy)((currSpy, vx) =>
+        currSpy match
+          case vy :: rem => unify(ctx, vx.value, vy.value); rem
+          case _ =>
+            throw new Exception()
       )
-    case _ => throw new Exception(s"unable to unify $x and $y")
+    (x.force, y.force) match
+      case (Val.U, Val.U) =>
+      case (Val.Flex(x, spx), Val.Flex(y, spy)) if x == y =>
+        unifySp(spx, spy)
+      case (Val.Rigid(x, spx), Val.Rigid(y, spy)) if x == y =>
+        unifySp(spx, spy)
+      case (Val.Flex(id, spine), y) => solve(id, ctx.envLen, spine, y)
+      case (x, Val.Flex(id, spine)) => solve(id, ctx.envLen, spine, x)
+      case (Val.Lam(param, cl, i), y) =>
+        val value = Val.Var(ctx.envLen)
+        // dummy type
+        unify(ctx.add(param, value, Val.U), cl(value), y(Param(value, i)))
+      case (x, Val.Lam(param, cl, i)) =>
+        val value = Val.Var(ctx.envLen)
+        unify(ctx.add(param, value, Val.U), x(Param(value, i)), cl(value))
+      case (Val.Pi(param1, ty1, cl1, i1), Val.Pi(param2, ty2, cl2, i2)) =>
+        if i1 != i2 then throw new Exception()
+        val value = Val.Var(ctx.envLen)
+        unify(ctx, ty1, ty2)
+        unify(
+          ctx.add(param1, value, Val.U),
+          cl1(value),
+          cl2(value)
+        )
+      case _ => throw new Exception()
+  catch
+    case e =>
+      throw new Error.UnifyError(ctx, x, y, e)

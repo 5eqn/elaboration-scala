@@ -46,9 +46,15 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
     lhs,
     eval(
       List(),
-      // use explicit lambdas here
-      // note how `eval` converts `env` to explicit spine
-      sp.foldRight((tm, 0))((param, pair) =>
+      // The inner terms would likely be explicit
+      // because inner params are from `env`,
+      // which are converted to explicit.
+      //
+      // Also note that we use foldLeft,
+      // consider the rightmost term, intuitively it's the
+      // last applied term, so it should be in the outermost lambda,
+      // as it gets processed last, this is satisfied.
+      sp.foldLeft((tm, 0))((pair, param) =>
         val (term, lvl) = pair
         (Term.Lam("x" + lvl, term, param.icit), lvl + 1)
       )._1
@@ -64,12 +70,10 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
     )
   (x.force, y.force) match
     case (Val.U, Val.U) =>
-    case (Val.Flex(x, spx), Val.Flex(y, spy)) =>
-      if x != y then throw new Exception(s"flex root differs: $x != $y")
-      else unifySp(spx, spy)
-    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) =>
-      if x != y then throw new Exception(s"rigid root differs: $x != $y")
-      else unifySp(spx, spy)
+    case (Val.Flex(x, spx), Val.Flex(y, spy)) if x == y =>
+      unifySp(spx, spy)
+    case (Val.Rigid(x, spx), Val.Rigid(y, spy)) if x == y =>
+      unifySp(spx, spy)
     case (Val.Flex(id, spine), y) => solve(id, envLen, spine, y)
     case (x, Val.Flex(id, spine)) => solve(id, envLen, spine, x)
     case (Val.Lam(_, cl, i), y) =>

@@ -44,7 +44,9 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - I forgot to insert implicit arguments when checking type of implicit function against explicit Pi type
 - I forgot to make sure name of inserted variable doesn't collide with existing ones
 - I forgot to recurse insert function
-- When implementing spine comparison, I mistakenly use foldRight
+- When implementing spine comparison, I mistakenly use `foldRight`
+- When generating lambdas, I mistakenly use `foldRight`
+    - I made detailed explanation on these two `foldLeft`s
 - When inferring type of function application, when the function's type is meta, I forgot to attempt to unify it with `?0 -> ?1`
     - However, no tests will fail without this
 
