@@ -39,6 +39,7 @@ enum Src:
     case ImplAuto    => Icit.Impl
     case ImplBind(_) => Icit.Impl
 
+// extending `Positional` instantly adds `pos` field to `Raw`
 enum Raw extends Positional:
   case U
   case Hole
