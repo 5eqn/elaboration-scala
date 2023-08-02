@@ -1,10 +1,10 @@
-package exception.fc
+package `implicit`.fc
 
 def eval(env: Env, tm: Term): Val = tm match
   case Term.U =>
     Val.U
-  case Term.Inserted(metaID) =>
-    Meta.value(metaID)(Spine(env))
+  case Term.Inserted(metaID, bindings) =>
+    Meta.value(metaID)(Spine(Env.filter(env, bindings)))
   case Term.Meta(metaID) =>
     Meta.value(metaID)
   case Term.Var(index) =>

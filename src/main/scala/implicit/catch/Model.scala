@@ -1,4 +1,4 @@
-package exception.`catch`
+package `implicit`.`catch`
 
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
@@ -96,7 +96,7 @@ enum Raw extends Positional:
 enum Term:
   case U
   case Meta(metaID: MetaID)
-  case Inserted(metaID: MetaID)
+  case Inserted(metaID: MetaID, bindings: Bindings)
   case Var(index: Index)
   case App(func: Term, arg: Term, icit: Icit)
   case Lam(param: Name, body: Term, icit: Icit)
@@ -105,27 +105,27 @@ enum Term:
 
   // a naive serialization of `Term` utilizing the context
   def read(ctx: Ctx): String = this match
-    case U                => "U"
-    case Meta(metaID)     => s"?$metaID"
-    case Inserted(metaID) => "_"
-    case Var(index)       => ctx.names(index)
+    case U                   => "U"
+    case Meta(metaID)        => s"?$metaID"
+    case Inserted(metaID, _) => "_"
+    case Var(index)          => ctx.names(index)
     case App(func, arg, icit) =>
       icit match
         case Icit.Expl => s"${func.read(ctx)}(${arg.read(ctx)})"
         case Icit.Impl => s"${func.read(ctx)}{${arg.read(ctx)}}"
     case Lam(param, body, icit) =>
       icit match
-        case Icit.Expl => s"λ$param. ${body.read(ctx.add(param, Val.U))}"
-        case Icit.Impl => s"λ{$param}. ${body.read(ctx.add(param, Val.U))}"
+        case Icit.Expl => s"λ$param. ${body.read(ctx.bind(param, Val.U))}"
+        case Icit.Impl => s"λ{$param}. ${body.read(ctx.bind(param, Val.U))}"
     case Pi(param, ty, body, icit) =>
       icit match
         case Icit.Expl =>
-          s"($param : ${ty.read(ctx)}) -> (${body.read(ctx.add(param, Val.U))})"
+          s"($param : ${ty.read(ctx)}) -> (${body.read(ctx.bind(param, Val.U))})"
         case Icit.Impl =>
-          s"{$param : ${ty.read(ctx)}} -> (${body.read(ctx.add(param, Val.U))})"
+          s"{$param : ${ty.read(ctx)}} -> (${body.read(ctx.bind(param, Val.U))})"
     case Let(name, ty, body, next) =>
       s"let $name : ${ty.read(ctx)} = ${body
-          .read(ctx)}; ${next.read(ctx.add(name, Val.U))}"
+          .read(ctx)}; ${next.read(ctx.bind(name, Val.U))}"
 
 enum Val:
   case U

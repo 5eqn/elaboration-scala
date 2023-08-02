@@ -1,4 +1,4 @@
-package exception.fc
+package `implicit`.fc
 
 import scala.util.parsing.combinator.{Parsers, RegexParsers}
 import scala.util.parsing.input.CharSequenceReader

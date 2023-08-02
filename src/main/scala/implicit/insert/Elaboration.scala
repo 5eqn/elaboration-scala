@@ -11,7 +11,7 @@ package `implicit`.insert
 // meta terms should still be inserted!
 def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) = ty.force match
   case Val.Pi(param, ty, cl, Icit.Impl) =>
-    val metaTerm = Meta.fresh
+    val metaTerm = Meta.fresh(ctx)
     val metaVal = eval(ctx.env, metaTerm)
     insertActive(ctx, Term.App(tm, metaTerm, Icit.Impl), cl(metaVal))
   case _ => (tm, ty)
@@ -37,7 +37,7 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
   case Raw.U =>
     (Term.U, Val.U)
   case Raw.Hole =>
-    (Meta.fresh, eval(ctx.env, Meta.fresh))
+    (Meta.fresh(ctx), eval(ctx.env, Meta.fresh(ctx)))
   case Raw.Var(name) =>
     (Term.Var(ctx.envLen - ctx.getLevel(name) - 1), ctx.getType(name))
   case Raw.App(func, arg, dst) =>
@@ -57,8 +57,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
         val argTerm = check(ctx, arg, ty)
         (Term.App(funcTerm, argTerm, i), cl(eval(ctx.env, argTerm)))
       case ty =>
-        val argTy = eval(ctx.env, Meta.fresh)
-        val tmplCl = Closure(ctx.env, Meta.fresh)
+        val argTy = eval(ctx.env, Meta.fresh(ctx))
+        val tmplCl = Closure(ctx.env, Meta.fresh(ctx.bind("x", argTy)))
         val tmplTy = Val.Pi("x", argTy, tmplCl, i)
         unify(ctx.envLen, ty, tmplTy)
         val argTerm = check(ctx, arg, argTy)
@@ -68,8 +68,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
     throw new Exception("type of named lambda can't be inferred")
   case Raw.Lam(param, body, src) =>
     val i = src.icit
-    val metaVal = eval(ctx.env, Meta.fresh)
-    val newCtx = ctx.add(param, metaVal)
+    val metaVal = eval(ctx.env, Meta.fresh(ctx))
+    val newCtx = ctx.bind(param, metaVal)
     val (ttm, tty) = infer(newCtx, body)
     // insert implicit args passively for lambda body
     val (bodyTerm, bodyType) = insertPassive(newCtx, ttm, tty)
@@ -78,25 +78,25 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
   case Raw.Pi(param, ty, body, i) =>
     val tyTerm = check(ctx, ty, Val.U)
     val tyVal = eval(ctx.env, tyTerm)
-    val bodyTerm = check(ctx.add(param, tyVal), body, Val.U)
+    val bodyTerm = check(ctx.bind(param, tyVal), body, Val.U)
     (Term.Pi(param, tyTerm, bodyTerm, i), Val.U)
   case Raw.Let(name, ty, body, next) =>
     val tyTerm = check(ctx, ty, Val.U)
     val tyVal = eval(ctx.env, tyTerm)
     val bodyTerm = check(ctx, body, tyVal)
     val bodyVal = eval(ctx.env, bodyTerm)
-    val (nextTerm, nextTy) = infer(ctx.add(name, bodyVal, tyVal), next)
+    val (nextTerm, nextTy) = infer(ctx.define(name, bodyVal, tyVal), next)
     (Term.Let(name, tyTerm, bodyTerm, nextTerm), nextTy)
 
 def check(ctx: Ctx, tm: Raw, ty: Val): Term = (tm, ty.force) match
   case (Raw.Hole, _) =>
-    Meta.fresh
+    Meta.fresh(ctx)
   // if icit match, check as usual
   // e.g. in `id : {A : U} -> A -> A = \{A} x. x`,
   // two icits match
   case (Raw.Lam(param, body, src), Val.Pi(_, ty, cl, i)) if (src.icit == i) =>
     val paramVal = ctx.nextVal
-    val bodyVal = check(ctx.add(param, paramVal, ty), body, cl(paramVal))
+    val bodyVal = check(ctx.bind(param, paramVal, ty), body, cl(paramVal))
     Term.Lam(param, bodyVal, i)
   // if they don't match and pi is implicit,
   // add a implicit term to lambda
@@ -104,7 +104,7 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term = (tm, ty.force) match
   // name has prefix "?" to avoid name collision
   case (_, Val.Pi(param, ty, cl, Icit.Impl)) =>
     val paramVal = ctx.nextVal
-    val bodyVal = check(ctx.add(s"?$param", paramVal, ty), tm, cl(paramVal))
+    val bodyVal = check(ctx.bind(s"?$param", paramVal, ty), tm, cl(paramVal))
     Term.Lam(param, bodyVal, Icit.Impl)
   case _ =>
     val (ttm, tty) = infer(ctx, tm)
