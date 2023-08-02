@@ -90,7 +90,8 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     3. implicit.insert (5*)
     4. implicit.named (3*)
 5. Pretty Exceptions
-    1. exception.fc (5*)
+    1. exception.fc (1*)
+    2. exception.catch (3*)
 
 ## Contribution
 

@@ -1,6 +1,8 @@
 package exception.`catch`
 
 import scala.util.parsing.input.Positional
+import scala.util.parsing.input.Position
+import scala.util.parsing.input.NoPosition
 
 type Name = String
 type Index = Int
@@ -14,6 +16,11 @@ object Spine:
 
 case class Param(value: Val, icit: Icit):
   def force: Param = Param(value.force, icit)
+
+  // helper function for serializing param with icit
+  def read(ctx: Ctx): String = icit match
+    case Icit.Expl => value.read(ctx)
+    case Icit.Impl => s"{${value.read(ctx)}}"
 
 enum Icit:
   case Expl
@@ -39,7 +46,6 @@ enum Src:
     case ImplAuto    => Icit.Impl
     case ImplBind(_) => Icit.Impl
 
-// extending `Positional` instantly adds `pos` field to `Raw`
 enum Raw extends Positional:
   case U
   case Hole
@@ -49,23 +55,43 @@ enum Raw extends Positional:
   case Pi(param: Name, ty: Raw, body: Raw, icit: Icit)
   case Let(name: Name, ty: Raw, body: Raw, next: Raw)
 
+  def ensurePosed(defPos: Position): Unit =
+    this setPos defPos
+    this match
+      case App(func, arg, dst) =>
+        func.ensurePosed(pos)
+        arg.ensurePosed(pos)
+      case Lam(param, body, src) =>
+        body.ensurePosed(pos)
+      case Pi(param, ty, body, icit) =>
+        ty.ensurePosed(pos)
+        body.ensurePosed(pos)
+      case Let(name, ty, body, next) =>
+        ty.ensurePosed(pos)
+        body.ensurePosed(pos)
+        next.ensurePosed(pos)
+      case _ =>
+
+  // a naive serialization of `Raw`
   override def toString(): String = this match
     case U         => "U"
     case Hole      => "_"
     case Var(name) => name
     case App(func, arg, dst) =>
-      dst.icit match
-        case Icit.Expl => s"${func}(${arg})"
-        case Icit.Impl => s"${func}{${arg}}"
+      dst match
+        case Dst.Expl           => s"$func($arg)"
+        case Dst.ImplAuto       => s"$func{$arg}"
+        case Dst.ImplBind(name) => s"$func{$name = $arg}"
     case Lam(param, body, src) =>
-      src.icit match
-        case Icit.Expl => s"λ$param. ${body}"
-        case Icit.Impl => s"λ{$param}. ${body}"
+      src match
+        case Src.Expl           => s"λ$param. $body"
+        case Src.ImplAuto       => s"λ{$param}. $body"
+        case Src.ImplBind(name) => s"λ{$name = $param}. $body"
     case Pi(param, ty, body, icit) =>
       icit.match
-        case Icit.Expl => s"($param : ${ty}) -> (${body})"
-        case Icit.Impl => s"{$param : ${ty}} -> (${body})"
-    case Let(name, ty, body, next) => s"let $name : ${ty} = ${body}; ${next}"
+        case Icit.Expl => s"($param : $ty) -> ($body)"
+        case Icit.Impl => s"{$param : $ty} -> ($body)"
+    case Let(name, ty, body, next) => s"let $name : $ty = $body; $next"
 
 enum Term:
   case U
@@ -77,9 +103,10 @@ enum Term:
   case Pi(param: Name, ty: Term, body: Term, icit: Icit)
   case Let(name: Name, ty: Term, body: Term, next: Term)
 
+  // a naive serialization of `Term` utilizing the context
   def read(ctx: Ctx): String = this match
     case U                => "U"
-    case Meta(metaID)     => s"?${metaID}"
+    case Meta(metaID)     => s"?$metaID"
     case Inserted(metaID) => "_"
     case Var(index)       => ctx.names(index)
     case App(func, arg, icit) =>
@@ -107,13 +134,14 @@ enum Val:
   case Lam(param: Name, cl: Closure, icit: Icit)
   case Pi(param: Name, ty: Val, cl: Closure, icit: Icit)
 
+  // serialization of `Val` utilizes `quote`
+  def read(ctx: Ctx): String = quote(ctx.envLen, this).read(ctx)
+
   def apply(u: Param): Val = this match
-    case Lam(param, cl, i) =>
-      if u.icit != i then throw new Error.ApplyWrongIcit(this, u, i)
-      else cl(u.value)
+    case Lam(param, cl, _)   => cl(u.value)
     case Rigid(level, spine) => Rigid(level, u :: spine)
     case Flex(metaID, spine) => Flex(metaID, u :: spine)
-    case _                   => throw new Error.ApplyToType(this, u)
+    case _                   => throw new InnerError.BadApplication(this, u)
 
   def apply(sp: Spine): Val =
     sp.foldRight(this)((value, term) => term(value))

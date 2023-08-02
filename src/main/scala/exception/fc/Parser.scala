@@ -3,6 +3,7 @@ package exception.fc
 import scala.util.parsing.combinator.{Parsers, RegexParsers}
 import scala.util.parsing.input.CharSequenceReader
 import scala.language.postfixOps
+import scala.util.parsing.input.NoPosition
 
 object ScalaParser extends RegexParsers {
   def ws: Parser[Unit] = ("""\s*""".r ^^^ ()) ~> comment
@@ -24,7 +25,8 @@ object ScalaParser extends RegexParsers {
     not("""[a-zA-Z0-9_]""".r) | ws
   }
 
-  // adding `positioned` is enough!
+  // adding `positioned` is enough,
+  // which is exceptionally easy.
   def pAtom: Parser[Raw] = positioned(
     pIdent ^^ Raw.Var.apply |
       symbol("U") ^^^ Raw.U |
@@ -97,6 +99,8 @@ object ScalaParser extends RegexParsers {
   def parseInput(input: String): Raw =
     parse(pSrc, new CharSequenceReader(input)) match
       case Success(result, next) =>
+        // ensure each `Raw` has or inherits a position
+        result.ensurePosed(NoPosition)
         result
       case Failure(msg, next) =>
         throw new Exception(s"Parse failure: $msg")

@@ -1,60 +1,43 @@
 package exception.`catch`
 
-enum Error extends Exception:
+// Root error for positioning
+case class RootError(ctx: Ctx, tm: Raw, next: InnerError) extends Exception:
+  override def getMessage(): String =
+    s"At Line ${tm.pos.line} Column ${tm.pos.column}:\n${tm.pos.longString}\n" +
+      s"When checking or inferring $tm:\n\n" +
+      s"${next.read(ctx)}"
 
-  // contextless errors
+// Stackable inner error cause
+enum InnerError extends Exception:
+  case SpineMismatch()
+  case PlainUnifyError()
   case InferNamedLambda()
   case IntersectionRename()
+  case NameNotFound(name: Name)
   case ImplicitArgNotFound(name: Name)
-  case IcitMismatch(fn: Icit, arg: Icit)
-
-  // context inherit errors
-  case ApplyToType(fn: Val, arg: Param)
-  case ApplyWrongIcit(fn: Val, arg: Param, fnIcit: Icit)
-
-  // contextful errors
-  case InsertError(ctx: Ctx, tm: Term, ty: Val, next: Throwable)
-  case UnifyError(ctx: Ctx, lhs: Val, rhs: Val, next: Throwable)
-  case CheckError(ctx: Ctx, tm: Raw, ty: Term, next: Throwable)
-  case InferError(ctx: Ctx, tm: Raw, next: Throwable)
-
-  override def getMessage(): String = this match
-    case InferNamedLambda() =>
-      "Can't infer type of named lambda"
-    case ApplyToType(fn, arg) =>
-      "Can't apply argument to type"
-    case ApplyWrongIcit(fn, arg, fnIcit) =>
-      s"Can't apply argument with wrong icit to $fnIcit func"
-    case IntersectionRename() =>
-      "Intersection renaming is currently not supported"
-    case ImplicitArgNotFound(name) =>
-      s"Implicit argument $name not found"
-    case IcitMismatch(fn, arg) =>
-      s"Icit mismatch: function expects $fn, but argument is $arg"
-    case InsertError(ctx, tm, ty, next) =>
-      s"Can't insert '${tm.read(ctx)}' of type '$ty':\n\n${readError(next, ctx)}"
-    case UnifyError(ctx, lhs, rhs, next) =>
-      s"Can't unify '${quote(ctx.envLen, lhs).read(ctx)}' and '${quote(ctx.envLen, rhs)
-          .read(ctx)}':\n\n${readError(next, ctx)}"
-    case CheckError(ctx, tm, ty, next) =>
-      s"At Line ${tm.pos.line} Column ${tm.pos.column}:\n${tm.pos.longString}\n" +
-        s"Can't check '${tm}' against '${ty.read(ctx)}':\n\n${readError(next, ctx)}"
-    case InferError(ctx, tm, next) =>
-      s"At Line ${tm.pos.line} Column ${tm.pos.column}:\n${tm.pos.longString}\n" +
-        s"Can't infer type of '${tm}':\n\n${readError(next, ctx)}"
+  case IcitMismatch(lhs: Icit, rhs: Icit)
+  case BadApplication(fn: Val, arg: Param)
+  case InsertError(ctx: Ctx, tm: Term, next: InnerError)
+  case UnifyError(ctx: Ctx, lhs: Val, rhs: Val, next: InnerError)
 
   def read(ctx: Ctx): String = this match
-    case ApplyToType(fn, arg) =>
-      s"Can't apply argument '${quote(ctx.envLen, arg.value).read(
-          ctx
-        )}' to type '${quote(ctx.envLen, fn).read(ctx)}'"
-    case ApplyWrongIcit(fn, arg, fnIcit) =>
-      s"Can't apply argument '${quote(ctx.envLen, arg.value).read(
-          ctx
-        )}' (${arg.icit}) with wrong icit to '${quote(ctx.envLen, fn).read(ctx)}' ($fnIcit)"
-    case _ => getMessage()
-
-def readError(error: Throwable, ctx: Ctx): String =
-  if error.isInstanceOf[Error]
-  then error.asInstanceOf[Error].read(ctx)
-  else error.getMessage()
+    case SpineMismatch() =>
+      "Length of spine is different"
+    case PlainUnifyError() =>
+      "Values obviously inconsistent"
+    case InferNamedLambda() =>
+      "Can't infer type of named lambda"
+    case IntersectionRename() =>
+      "Intersection renaming is currently not supported"
+    case NameNotFound(name) =>
+      s"Name $name not found in context"
+    case ImplicitArgNotFound(name) =>
+      s"Implicit argument $name not found"
+    case IcitMismatch(lhs, rhs) =>
+      s"Icit mismatch: lhs is $lhs, but rhs is $rhs"
+    case BadApplication(fn, arg) =>
+      s"Can't apply '${arg.read(ctx)}' to '${fn.read(ctx)}'"
+    case InsertError(ctx, tm, next) =>
+      s"Can't insert '${tm.read(ctx)}':\n\n${next.read(ctx)}"
+    case UnifyError(ctx, lhs, rhs, next) =>
+      s"Can't unify '${lhs.read(ctx)}' and '${rhs.read(ctx)}':\n\n${next.read(ctx)}"

@@ -3,6 +3,8 @@ package exception.`catch`
 import scala.util.parsing.combinator.{Parsers, RegexParsers}
 import scala.util.parsing.input.CharSequenceReader
 import scala.language.postfixOps
+import scala.util.parsing.input.Position
+import scala.util.parsing.input.NoPosition
 
 object ScalaParser extends RegexParsers {
   def ws: Parser[Unit] = ("""\s*""".r ^^^ ()) ~> comment
@@ -24,13 +26,13 @@ object ScalaParser extends RegexParsers {
     not("""[a-zA-Z0-9_]""".r) | ws
   }
 
-  // adding `positioned` is enough!
-  def pAtom: Parser[Raw] = positioned(
+  def pAtom = positioned(
     pIdent ^^ Raw.Var.apply |
       symbol("U") ^^^ Raw.U |
       symbol("_") ^^^ Raw.Hole |
       parens(pRaw)
   )
+  def pHole = positioned(success(Raw.Hole))
 
   def pDstImplBind = for {
     x <- "{" ~> pIdent <~ "="
@@ -43,8 +45,8 @@ object ScalaParser extends RegexParsers {
   def pDstExpl = for {
     t <- pAtom
   } yield (t, Dst.Expl)
-  def pArg: Parser[(Raw, Dst)] = pDstImplBind | pDstImplAuto | pDstExpl
-  def pSpine: Parser[Raw] = positioned(for {
+  def pArg = pDstImplBind | pDstImplAuto | pDstExpl
+  def pSpine = positioned(for {
     atom <- pAtom
     args <- rep(pArg)
   } yield args.foldLeft(atom) { case (func, (arg, dst)) =>
@@ -60,7 +62,7 @@ object ScalaParser extends RegexParsers {
   } yield (t, Src.ImplAuto)
   def pSrcExpl = pBind ^^ ((_, Src.Expl))
   def pLamBinder = pSrcImplBind | pSrcImplAuto | pSrcExpl
-  def pLam: Parser[Raw] = positioned(for {
+  def pLam = positioned(for {
     _ <- char('λ') | char('\\')
     xs <- rep1(pLamBinder)
     _ <- char('.')
@@ -69,34 +71,36 @@ object ScalaParser extends RegexParsers {
 
   def pPiExpl = parens(rep1(pBind) ~ (char(':') ~> pRaw)) ~ success(Icit.Expl)
   def pPiImpl = braces(rep1(pBind) ~ (char(':') ~> pRaw)) ~ success(Icit.Impl)
-  def pPiImplAuto = braces(rep1(pBind) ~ success(Raw.Hole)) ~ success(Icit.Impl)
+  def pPiImplAuto = braces(rep1(pBind) ~ pHole) ~ success(Icit.Impl)
   def pPiBinder = pPiImpl | pPiImplAuto | pPiExpl
-  def pPi: Parser[Raw] = positioned(for {
+  def pPi = positioned(for {
     dom <- rep1(pPiBinder)
     _ <- pArrow
     cod <- pRaw
   } yield dom.foldRight(cod) { case ((params ~ a ~ icit), t) =>
     params.foldRight(t)((param, acc) => Raw.Pi(param, a, acc, icit))
   })
-  def funOrSpine: Parser[Raw] = positioned(pSpine.flatMap { sp =>
+  def funOrSpine = positioned(pSpine.flatMap { sp =>
     opt(pArrow).flatMap {
       case Some(_) => pRaw.map(t => Raw.Pi("_", sp, t, Icit.Expl))
       case None    => success(sp)
     }
   })
 
-  def pLet: Parser[Raw] = positioned(for {
+  def pTy = (symbol(":") ~> pRaw) | pHole
+  def pLet = positioned(for {
     x <- pKeyword("let") ~> pIdent
-    a <- opt(symbol(":") ~> pRaw)
+    a <- pTy
     t <- symbol("=") ~> pRaw
     u <- symbol(";") ~> pRaw
-  } yield Raw.Let(x, a.getOrElse(Raw.Hole), t, u))
+  } yield Raw.Let(x, a, t, u))
   def pRaw: Parser[Raw] = pLam | pLet | pPi | funOrSpine
-  def pSrc: Parser[Raw] = ws ~> pRaw <~ """\z""".r
+  def pSrc = ws ~> pRaw <~ """\z""".r
 
   def parseInput(input: String): Raw =
     parse(pSrc, new CharSequenceReader(input)) match
       case Success(result, next) =>
+        result.ensurePosed(next.pos)
         result
       case Failure(msg, next) =>
         throw new Exception(s"Parse failure: $msg")
