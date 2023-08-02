@@ -1,6 +1,7 @@
 package exception.fc
 
 import scala.util.parsing.input.Positional
+import scala.util.parsing.input.Position
 
 type Name = String
 type Index = Int
@@ -48,6 +49,25 @@ enum Raw extends Positional:
   case Lam(param: Name, body: Raw, src: Src)
   case Pi(param: Name, ty: Raw, body: Raw, icit: Icit)
   case Let(name: Name, ty: Raw, body: Raw, next: Raw)
+
+  // some folded `Raw`s do not have `pos` assigned when parsing
+  // we have to fix it manually
+  def ensurePosed(defPos: Position): Unit =
+    this setPos defPos
+    this match
+      case App(func, arg, dst) =>
+        func.ensurePosed(pos)
+        arg.ensurePosed(pos)
+      case Lam(param, body, src) =>
+        body.ensurePosed(pos)
+      case Pi(param, ty, body, icit) =>
+        ty.ensurePosed(pos)
+        body.ensurePosed(pos)
+      case Let(name, ty, body, next) =>
+        ty.ensurePosed(pos)
+        body.ensurePosed(pos)
+        next.ensurePosed(pos)
+      case _ =>
 
 enum Term:
   case U

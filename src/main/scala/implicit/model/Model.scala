@@ -73,7 +73,7 @@ enum Val:
   case Pi(param: Name, ty: Val, cl: Closure, icit: Icit)
 
   def apply(u: Param): Val = this match
-    // don't ensure icit consistency here, but why?
+    // the icit is already checked, there's no need to check again
     case Lam(param, cl, _)   => cl(u.value)
     case Rigid(level, spine) => Rigid(level, u :: spine)
     case Flex(metaID, spine) => Flex(metaID, u :: spine)

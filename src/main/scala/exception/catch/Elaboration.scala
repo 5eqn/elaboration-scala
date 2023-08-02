@@ -9,8 +9,10 @@ def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) =
         insertActive(ctx, Term.App(tm, metaTerm, Icit.Impl), cl(metaVal))
       case _ => (tm, ty)
   catch
-    case e =>
-      throw new Error.InsertError(ctx, tm, ty, e)
+    // only catch inner error, other errors are parser errors,
+    // they should be thrown normally
+    case e: InnerError =>
+      throw new InnerError.InsertError(ctx, tm, e)
 
 def insertUntil(ctx: Ctx, name: Name, tm: Term, ty: Val): (Term, Val) =
   try
@@ -21,10 +23,10 @@ def insertUntil(ctx: Ctx, name: Name, tm: Term, ty: Val): (Term, Val) =
         val metaTerm = Meta.fresh
         val metaVal = eval(ctx.env, metaTerm)
         insertUntil(ctx, name, Term.App(tm, metaTerm, Icit.Impl), cl(metaVal))
-      case _ => throw new Error.ImplicitArgNotFound(name)
+      case _ => throw new InnerError.ImplicitArgNotFound(name)
   catch
-    case e =>
-      throw new Error.InsertError(ctx, tm, ty, e)
+    case e: InnerError =>
+      throw new InnerError.InsertError(ctx, tm, e)
 
 def insertPassive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) = tm match
   case Term.Lam(_, _, Icit.Impl) =>
@@ -32,7 +34,6 @@ def insertPassive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) = tm match
   case _ => insertActive(ctx, tm, ty)
 
 def infer(ctx: Ctx, tm: Raw): (Term, Val) =
-  // wrap top-level infer and check with try-catch
   try
     tm match
       case Raw.U =>
@@ -54,18 +55,18 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
             insertUntil(ctx, to, ttm, tty)
         funcType.force match
           case Val.Pi(_, ty, cl, j) =>
-            if i != j then throw new Error.IcitMismatch(j, i)
+            if i != j then throw new InnerError.IcitMismatch(j, i)
             val argTerm = check(ctx, arg, ty)
             (Term.App(funcTerm, argTerm, i), cl(eval(ctx.env, argTerm)))
           case ty =>
             val argTy = eval(ctx.env, Meta.fresh)
             val tmplCl = Closure(ctx.env, Meta.fresh)
             val tmplTy = Val.Pi("x", argTy, tmplCl, i)
-            unify(ctx, ty, tmplTy)
+            unifyCatch(ctx, ty, tmplTy)
             val argTerm = check(ctx, arg, argTy)
             (Term.App(funcTerm, argTerm, i), tmplCl(eval(ctx.env, argTerm)))
       case Raw.Lam(_, _, Src.ImplBind(_)) =>
-        throw new Error.InferNamedLambda()
+        throw new InnerError.InferNamedLambda()
       case Raw.Lam(param, body, src) =>
         val i = src.icit
         val metaVal = eval(ctx.env, Meta.fresh)
@@ -87,9 +88,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
         val (nextTerm, nextTy) = infer(ctx.add(name, bodyVal, tyVal), next)
         (Term.Let(name, tyTerm, bodyTerm, nextTerm), nextTy)
   catch
-    case e @ Error.InferError(_, _, _) => throw e
-    case e =>
-      throw new Error.InferError(ctx, tm, e)
+    case e: InnerError =>
+      throw new RootError(ctx, tm, e)
 
 def check(ctx: Ctx, tm: Raw, ty: Val): Term =
   try
@@ -107,14 +107,14 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
         Term.Lam(param, bodyVal, i)
       case (_, Val.Pi(param, ty, cl, Icit.Impl)) =>
         val paramVal = ctx.nextVal
-        val bodyVal = check(ctx.add(s"?$param", paramVal, ty), tm, cl(paramVal))
+        val bodyVal =
+          check(ctx.add(s"auto#$param", paramVal, ty), tm, cl(paramVal))
         Term.Lam(param, bodyVal, Icit.Impl)
       case _ =>
         val (ttm, tty) = infer(ctx, tm)
         val (term, value) = insertPassive(ctx, ttm, tty)
-        unify(ctx, value, ty)
+        unifyCatch(ctx, value, ty)
         term
   catch
-    case e @ Error.CheckError(_, _, _, _) => throw e
-    case e =>
-      throw new Error.CheckError(ctx, tm, quote(ctx.envLen, ty), e)
+    case e: InnerError =>
+      throw new RootError(ctx, tm, e)
