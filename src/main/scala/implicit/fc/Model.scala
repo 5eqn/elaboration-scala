@@ -1,4 +1,4 @@
-package exception.fc
+package `implicit`.fc
 
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
@@ -72,7 +72,7 @@ enum Raw extends Positional:
 enum Term:
   case U
   case Meta(metaID: MetaID)
-  case Inserted(metaID: MetaID)
+  case Inserted(metaID: MetaID, bindings: Bindings)
   case Var(index: Index)
   case App(func: Term, arg: Term, icit: Icit)
   case Lam(param: Name, body: Term, icit: Icit)

@@ -1,4 +1,4 @@
-package exception.`catch`
+package `implicit`.`catch`
 
 // Root error for positioning
 case class RootError(ctx: Ctx, tm: Raw, next: InnerError) extends Exception:
@@ -9,6 +9,7 @@ case class RootError(ctx: Ctx, tm: Raw, next: InnerError) extends Exception:
 // Stackable inner error cause
 enum InnerError extends Exception:
   case SpineMismatch()
+  case PruningRename()
   case PlainUnifyError()
   case InferNamedLambda()
   case IntersectionRename()
@@ -22,6 +23,8 @@ enum InnerError extends Exception:
   def read(ctx: Ctx): String = this match
     case SpineMismatch() =>
       "Length of spine is different"
+    case PruningRename() =>
+      "Pruning is currently not supported"
     case PlainUnifyError() =>
       "Values obviously inconsistent"
     case InferNamedLambda() =>

@@ -1,4 +1,4 @@
-package exception.fc
+package `implicit`.fc
 
 case class PartialRenaming(cod: Level, dom: Level, map: Map[Int, Level]):
   def lift: PartialRenaming =
@@ -53,11 +53,8 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
 
 def unify(envLen: Level, x: Val, y: Val): Unit =
   val unifySp = (x: Spine, y: Spine) =>
-    x.foldLeft(y)((y, vx) =>
-      y match
-        case vy :: rem => unify(envLen, vx.value, vy.value); rem
-        case _         => throw new Exception("spine length differs")
-    )
+    if x.length != y.length then throw new Exception("spine length mismatch")
+    x.zip(y).map((lhs, rhs) => unify(envLen, lhs.value, rhs.value))
   (x.force, y.force) match
     case (Val.U, Val.U) =>
     case (Val.Flex(x, spx), Val.Flex(y, spy)) if x == y =>

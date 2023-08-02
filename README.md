@@ -17,7 +17,6 @@ For example, in `implicit.insert`, `Elaboration.scala` is the only file that has
         - Parser is also implemented in Scala3
 - I made less documentation and references, for that please refer to the original
 - I made certain implementation simpler
-    - In metas, I didn't filter defined variables
     - In implicit, I use "?" prefix instead of env masking to ensure variable names don't collide
 - I try to write idiomatic Scala3 code instead of solely adhering to the original
     - Using Singleton when implementing Meta is much more convenient
@@ -84,14 +83,14 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     2. holes.spine (3*)
     3. holes.renaming (4*)
     4. holes.meta (5*)
+    5. holes.filter (3*)
 4. Implicit Arguments
     1. implicit.modularize (1*)
     2. implicit.model (3*)
     3. implicit.insert (5*)
     4. implicit.named (3*)
-5. Pretty Exceptions
-    1. exception.fc (1*)
-    2. exception.catch (3*)
+    5. implicit.fc (2*)
+    6. implicit.catch (3*)
 
 ## Contribution
 

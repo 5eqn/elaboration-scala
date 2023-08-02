@@ -49,7 +49,7 @@ enum Raw:
 enum Term:
   case U
   case Meta(metaID: MetaID)
-  case Inserted(metaID: MetaID)
+  case Inserted(metaID: MetaID, bindings: Bindings)
   case Var(index: Index)
   case App(func: Term, arg: Term, icit: Icit)
   case Lam(param: Name, body: Term, icit: Icit)

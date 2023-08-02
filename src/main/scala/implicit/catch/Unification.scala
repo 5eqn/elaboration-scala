@@ -1,9 +1,16 @@
-package exception.`catch`
+package `implicit`.`catch`
 
-case class PartialRenaming(cod: Level, dom: Level, map: Map[Int, Level]):
+case class PartialRenaming(cod: Level, dom: Level, map: Map[Level, Level]):
   def lift: PartialRenaming =
     PartialRenaming(cod + 1, dom + 1, map + (cod -> dom))
   def nextCod: Val = Val.Var(cod)
+
+  // this map access should throw InnerError as well
+  def getTerm(level: Level): Term =
+    try Term.Var(dom - map(level) - 1)
+    catch
+      case _ =>
+        throw new InnerError.PruningRename()
 
 def invert(envLen: Level, spine: Spine): PartialRenaming =
   spine.foldRight(PartialRenaming(envLen, 0, Map()))((param, pr) =>
@@ -26,7 +33,7 @@ def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
       if rhs == lhs then throw new InnerError.IntersectionRename()
       else renameSp(spine, Term.Meta(rhs))
     case Val.Rigid(level, spine) =>
-      renameSp(spine, Term.Var(pr.dom - pr.map(level) - 1))
+      renameSp(spine, pr.getTerm(level))
     case Val.Lam(param, cl, i) =>
       Term.Lam(param, rename(lhs, pr.lift, cl(pr.nextCod)), i)
     case Val.Pi(param, ty, cl, i) =>
@@ -53,12 +60,8 @@ def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
 
 def unify(envLen: Level, x: Val, y: Val): Unit =
   val unifySp = (spx: Spine, spy: Spine) =>
-    spx.foldLeft(spy)((currSpy, vx) =>
-      currSpy match
-        case vy :: rem => unify(envLen, vx.value, vy.value); rem
-        case _ =>
-          throw new InnerError.SpineMismatch()
-    )
+    if spx.length != spy.length then throw InnerError.SpineMismatch()
+    spx.zip(spy).map((lhs, rhs) => unify(envLen, lhs.value, rhs.value))
   (x.force, y.force) match
     case (Val.U, Val.U) =>
     case (Val.Flex(x, spx), Val.Flex(y, spy)) if x == y =>

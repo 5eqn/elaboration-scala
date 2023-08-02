@@ -1,4 +1,4 @@
-package `implicit`.model
+package `implicit`.fc
 
 type Types = List[Val]
 type Bindings = List[Binding]
