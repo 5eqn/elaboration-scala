@@ -91,6 +91,7 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     4. implicit.named (3*)
     5. implicit.fc (2*)
     6. implicit.catch (3*)
+    7. implicit.filter (2*)
 
 ## Contribution
 
