@@ -26,6 +26,7 @@ object ScalaParser extends RegexParsers {
     not("""[a-zA-Z0-9_]""".r) | ws
   }
 
+  // adding `positioned` in parser directly gives `pos` information
   def pAtom = positioned(
     pIdent ^^ Raw.Var.apply |
       symbol("U") ^^^ Raw.U |
