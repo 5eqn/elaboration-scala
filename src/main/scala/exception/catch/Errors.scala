@@ -4,8 +4,7 @@ package exception.`catch`
 case class RootError(ctx: Ctx, tm: Raw, next: InnerError) extends Exception:
   override def getMessage(): String =
     s"At Line ${tm.pos.line} Column ${tm.pos.column}:\n${tm.pos.longString}\n" +
-      s"When checking or inferring $tm:\n\n" +
-      s"${next.read(ctx)}"
+      s"When checking or inferring $tm:\n\n${next.read(ctx)}"
 
 // Stackable inner error cause
 enum InnerError extends Exception:
