@@ -46,6 +46,7 @@ enum Src:
     case ImplAuto    => Icit.Impl
     case ImplBind(_) => Icit.Impl
 
+// make `Raw` extend `Positional` so that it has a `pos` field
 enum Raw extends Positional:
   case U
   case Hole
@@ -55,6 +56,7 @@ enum Raw extends Positional:
   case Pi(param: Name, ty: Raw, body: Raw, icit: Icit)
   case Let(name: Name, ty: Raw, body: Raw, next: Raw)
 
+  // spread position data from root to leaves
   def ensurePosed(defPos: Position): Unit =
     this setPos defPos
     this match

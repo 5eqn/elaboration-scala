@@ -16,11 +16,9 @@ For example, in `implicit.insert`, `Elaboration.scala` is the only file that has
         - You can even see de-Bruijn indexes in tests
         - Parser is also implemented in Scala3
 - I made less documentation and references, for that please refer to the original
-- I made certain implementation simpler
-    - In implicit, I use "?" prefix instead of env masking to ensure variable names don't collide
 - I try to write idiomatic Scala3 code instead of solely adhering to the original
     - Using Singleton when implementing Meta is much more convenient
-- I added modules that I enjoy but not necessarily relate to typechecking
+- I added chapters that I enjoy but not necessarily relate to typechecking
     - e.g. Pretty Exceptions
 
 ## Fun fact
@@ -89,9 +87,8 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     2. implicit.model (3*)
     3. implicit.insert (5*)
     4. implicit.named (3*)
-    5. implicit.fc (2*)
-    6. implicit.catch (3*)
-    7. implicit.filter (2*)
+    5. implicit.catch (3*)
+    6. implicit.filter (2*)
 
 ## Contribution
 
