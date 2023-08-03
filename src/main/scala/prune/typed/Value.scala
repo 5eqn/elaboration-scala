@@ -5,16 +5,17 @@ type Env = List[Val]
 
 object Env:
   def filter(env: Env, prun: Pruning) =
-    env.zip(prun).filter((v, b) => b != Mask.Pruned).map(_._1)
+    env
+      .zip(prun)
+      // filter should add icit information to result
+      .collect { case (v, Mask.Keep(i)) =>
+        Param(v, i)
+      }
   def get(env: Env, index: Index) =
     try env(index)
     catch case _ => throw InnerError.IndexNotFound(index)
 
 type Spine = List[Param]
-
-object Spine:
-  def apply(env: Env): Spine =
-    env.map(value => Param(value, Icit.Expl))
 
 case class Param(value: Val, icit: Icit):
   def force: Param = Param(value.force, icit)
