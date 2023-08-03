@@ -1,4 +1,4 @@
-package `implicit`.filter
+package prune.model
 
 type Names = List[Name]
 type Bindings = List[Binding]

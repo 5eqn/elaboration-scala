@@ -3,7 +3,6 @@ package holes.filter
 
 type Name = String
 type Env = List[Val]
-type Types = List[Val]
 type Spine = List[Val]
 
 type Index = Int
@@ -44,31 +43,23 @@ object Meta:
 // add a binding field to context
 case class Ctx(
     env: Env,
-    types: Types,
     bindings: Bindings,
-    nameMap: Map[Name, Level]
+    src: Map[Name, (Level, Val)]
 ):
-  def getVal(name: Name): Val = getVal(nameMap(name))
-  def getVal(level: Level): Val = env(envLen - level - 1)
-  def getType(name: Name): Val = getType(nameMap(name))
-  def getType(level: Level): Val = types(envLen - level - 1)
-  def getLevel(name: Name): Level = nameMap(name)
   // separate `add` to `bind` and `define`
   def bind(name: Name, value: Val, ty: Val): Ctx =
     Ctx(
       value :: env,
-      ty :: types,
       Binding.Bound :: bindings,
-      nameMap + (name -> env.length)
+      src + (name -> (env.length, ty))
     )
   def bind(name: Name, ty: Val): Ctx =
     bind(name, Val.Var(env.length), ty)
   def define(name: Name, value: Val, ty: Val): Ctx =
     Ctx(
       value :: env,
-      ty :: types,
       Binding.Defined :: bindings,
-      nameMap + (name -> env.length)
+      src + (name -> (env.length, ty))
     )
   def define(name: Name, ty: Val): Ctx =
     define(name, Val.Var(env.length), ty)
@@ -76,7 +67,7 @@ case class Ctx(
   def nextVal: Val = Val.Var(env.length)
 
 object Ctx:
-  def empty: Ctx = Ctx(List(), List(), List(), Map())
+  def empty: Ctx = Ctx(List(), List(), Map())
 
 case class Closure(env: Env, body: Term):
   def apply(arg: Val): Val = eval(arg :: env, body)
@@ -245,7 +236,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
   case Raw.Hole =>
     (Meta.fresh(ctx), eval(ctx.env, Meta.fresh(ctx)))
   case Raw.Var(name) =>
-    (Term.Var(ctx.envLen - ctx.getLevel(name) - 1), ctx.getType(name))
+    val (level, ty) = ctx.src(name)
+    (Term.Var(ctx.envLen - level - 1), ty)
   case Raw.App(func, arg) =>
     val (funcTerm, funcType) = infer(ctx, func)
     funcType.force match

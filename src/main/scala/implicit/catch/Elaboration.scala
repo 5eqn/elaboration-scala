@@ -41,7 +41,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
       case Raw.Hole =>
         (Meta.fresh(ctx), eval(ctx.env, Meta.fresh(ctx)))
       case Raw.Var(name) =>
-        (Term.Var(ctx.envLen - ctx.getLevel(name) - 1), ctx.getType(name))
+        val (level, ty) = ctx(name)
+        (Term.Var(ctx.envLen - level - 1), ty)
       case Raw.App(func, arg, dst) =>
         val i = dst.icit
         val (funcTerm, funcType) = dst match

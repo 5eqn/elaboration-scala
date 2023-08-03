@@ -3,29 +3,23 @@ package holes.assemble
 
 type Name = String
 type Env = List[Val]
-type Types = List[Val]
 type Index = Int
 type Level = Int
 
 case class Ctx(
     env: Env,
-    types: Types,
-    nameMap: Map[Name, Level]
+    // the old `Cxt`, only used when inferring `Raw.Var`.
+    src: Map[Name, (Level, Val)]
 ):
-  def getVal(name: Name): Val = getVal(nameMap(name))
-  def getVal(level: Level): Val = env(envLen - level - 1)
-  def getType(name: Name): Val = getType(nameMap(name))
-  def getType(level: Level): Val = types(envLen - level - 1)
-  def getLevel(name: Name): Level = nameMap(name)
   def add(name: Name, value: Val, ty: Val): Ctx =
-    Ctx(value :: env, ty :: types, nameMap + (name -> env.length))
+    Ctx(value :: env, src + (name -> (env.length, ty)))
   def add(name: Name, ty: Val): Ctx =
     add(name, Val.Var(env.length), ty)
   def envLen: Int = env.length
   def nextVal: Val = Val.Var(env.length)
 
 object Ctx {
-  def empty: Ctx = Ctx(List(), List(), Map())
+  def empty: Ctx = Ctx(List(), Map())
 }
 
 case class Closure(env: Env, body: Term):
@@ -115,7 +109,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) = tm match
   case Raw.U =>
     (Term.U, Val.U)
   case Raw.Var(name) =>
-    (Term.Var(ctx.envLen - ctx.getLevel(name) - 1), ctx.getType(name))
+    val (level, ty) = ctx.src(name)
+    (Term.Var(ctx.envLen - level - 1), ty)
   case Raw.App(func, arg) =>
     infer(ctx, func) match
       case (funcTerm, Val.Pi(_, ty, cl)) =>
