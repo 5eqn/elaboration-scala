@@ -4,7 +4,9 @@ def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) =
   try
     ty.force match
       case Val.Pi(param, ty, cl, Icit.Impl) =>
-        val metaTerm = Meta.fresh(ctx)
+        // this meta is the parameter of given function
+        // get the type from Pi declaration
+        val metaTerm = Meta.fresh(ctx, ty)
         val metaVal = eval(ctx.env, metaTerm)
         insertActive(ctx, Term.App(tm, metaTerm, Icit.Impl), cl(metaVal))
       case _ => (tm, ty)
@@ -18,7 +20,7 @@ def insertUntil(ctx: Ctx, name: Name, tm: Term, ty: Val): (Term, Val) =
       case Val.Pi(param, _, _, Icit.Impl) if param == name =>
         (tm, ty)
       case Val.Pi(param, ty, cl, Icit.Impl) =>
-        val metaTerm = Meta.fresh(ctx)
+        val metaTerm = Meta.fresh(ctx, ty)
         val metaVal = eval(ctx.env, metaTerm)
         insertUntil(ctx, name, Term.App(tm, metaTerm, Icit.Impl), cl(metaVal))
       case _ => throw new InnerError.ImplicitArgNotFound(name)
@@ -37,7 +39,9 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
       case Raw.U =>
         (Term.U, Val.U)
       case Raw.Hole =>
-        (Meta.fresh(ctx), eval(ctx.env, Meta.fresh(ctx)))
+        // we have ?0 : U, ?1 : ?0
+        val ty = eval(ctx.env, Meta.fresh(ctx, Val.U))
+        (Meta.fresh(ctx, ty), ty)
       case Raw.Var(name) =>
         val (level, ty) = ctx(name)
         (Term.Var(ctx.envLen - level - 1), ty)
