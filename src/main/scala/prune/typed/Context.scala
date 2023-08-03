@@ -1,6 +1,4 @@
-// some types are moved to Common.scala, Presyntax.scala, Syntax.scala and Value.scala,
-// so that Ctx.scala looks cleaner.
-package prune.model
+package prune.typed
 
 case class Ctx(
     env: Env,

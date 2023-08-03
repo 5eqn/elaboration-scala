@@ -90,6 +90,8 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     4. implicit.named (3*)
     5. implicit.catch (3*)
     6. implicit.filter (1*)
+5. Pruning
+    1. prune.typed (4*)
 
 ## Contribution
 

@@ -1,11 +1,10 @@
-package prune.model
+package prune.typed
 
 def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) =
   try
     ty.force match
       case Val.Pi(param, ty, cl, Icit.Impl) =>
-        // this meta is the parameter of given function
-        // get the type from Pi declaration
+        // we want `tm ?0` is valid where `tm : ty -> _`, thus `?0 : ty`
         val metaTerm = Meta.fresh(ctx, ty)
         val metaVal = eval(ctx.env, metaTerm)
         insertActive(ctx, Term.App(tm, metaTerm, Icit.Impl), cl(metaVal))
@@ -62,8 +61,10 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
             val argTerm = check(ctx, arg, ty)
             (Term.App(funcTerm, argTerm, i), cl(eval(ctx.env, argTerm)))
           case ty =>
-            val argTy = eval(ctx.env, Meta.fresh(ctx))
-            val tmplCl = Closure(ctx.env, Meta.fresh(ctx.bind("x", argTy)))
+            // we want funcType = (x : ?0) => ?1, ?0 : U, ?1 : U
+            val argTy = eval(ctx.env, Meta.fresh(ctx, Val.U))
+            val tmplCl =
+              Closure(ctx.env, Meta.fresh(ctx.bind("x", argTy), Val.U))
             val tmplTy = Val.Pi("x", argTy, tmplCl, i)
             unifyCatch(ctx, ty, tmplTy)
             val argTerm = check(ctx, arg, argTy)
@@ -72,7 +73,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
         throw new InnerError.InferNamedLambda()
       case Raw.Lam(param, body, src) =>
         val i = src.icit
-        val metaVal = eval(ctx.env, Meta.fresh(ctx))
+        // we have \param : ?0 => body, ?0 : U
+        val metaVal = eval(ctx.env, Meta.fresh(ctx, Val.U))
         val newCtx = ctx.bind(param, metaVal)
         val (ttm, tty) = infer(newCtx, body)
         val (bodyTerm, bodyType) = insertPassive(newCtx, ttm, tty)
@@ -88,7 +90,8 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
         val tyVal = eval(ctx.env, tyTerm)
         val bodyTerm = check(ctx, body, tyVal)
         val bodyVal = eval(ctx.env, bodyTerm)
-        val (nextTerm, nextTy) = infer(ctx.define(name, bodyVal, tyVal), next)
+        val (nextTerm, nextTy) =
+          infer(ctx.define(name, bodyVal, tyVal, bodyTerm, tyTerm), next)
         (Term.Let(name, tyTerm, bodyTerm, nextTerm), nextTy)
   catch
     case e: InnerError =>
@@ -101,8 +104,9 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
         case Src.ImplBind(from) => from == piParam && i == Icit.Impl
         case _                  => src.icit == i
     (tm, ty.force) match
-      case (Raw.Hole, _) =>
-        Meta.fresh(ctx)
+      case (Raw.Hole, ty) =>
+        // we want ?0 : ty
+        Meta.fresh(ctx, ty)
       case (Raw.Lam(param, body, src), Val.Pi(piParam, ty, cl, i))
           if lamMatch(src, piParam, i) =>
         val paramVal = ctx.nextVal
@@ -110,7 +114,6 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
         Term.Lam(param, bodyVal, i)
       case (_, Val.Pi(param, ty, cl, Icit.Impl)) =>
         val paramVal = ctx.nextVal
-        // now there's no need to add prefix to inserted variables
         val bodyVal = check(ctx.bind(param, paramVal, ty), tm, cl(paramVal))
         Term.Lam(param, bodyVal, Icit.Impl)
       case _ =>

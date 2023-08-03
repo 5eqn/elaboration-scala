@@ -1,5 +1,5 @@
 // group all raw-related types together
-package prune.model
+package prune.typed
 
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
