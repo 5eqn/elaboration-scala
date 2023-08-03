@@ -46,6 +46,7 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
     - I made detailed explanation on these two `foldLeft`s
 - When inferring type of function application, when the function's type is meta, I forgot to attempt to unify it with `?0 -> ?1`
     - However, no tests will fail without this
+- Getting type of `Val` *makes no sense*, so there's no need storing a `types` array in `Ctx`
 
 Here are some of my unclear points:
 
@@ -88,7 +89,7 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     3. implicit.insert (5*)
     4. implicit.named (3*)
     5. implicit.catch (3*)
-    6. implicit.filter (2*)
+    6. implicit.filter (1*)
 
 ## Contribution
 

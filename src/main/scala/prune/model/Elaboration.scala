@@ -1,4 +1,4 @@
-package `implicit`.filter
+package prune.model
 
 def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) =
   try

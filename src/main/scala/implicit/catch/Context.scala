@@ -14,17 +14,13 @@ object Env:
 
 case class Ctx(
     env: Env,
-    types: Types,
     bindings: Bindings,
     // a name list is added for reverse name finding
     names: Names,
-    nameMap: Map[Name, Level]
+    nameMap: Map[Name, (Level, Val)]
 ):
-  def getVal(name: Name): Val = getVal(getLevel(name))
-  def getVal(level: Level): Val = env(envLen - level - 1)
-  def getType(name: Name): Val = getType(getLevel(name))
-  def getType(level: Level): Val = types(envLen - level - 1)
-  def getLevel(name: Name): Level =
+  // add error catching when accessing `nameMap` (the former `src`)
+  def apply(name: Name): (Level, Val) =
     try nameMap(name)
     catch
       case _ =>
@@ -32,20 +28,18 @@ case class Ctx(
   def define(name: Name, value: Val, ty: Val): Ctx =
     Ctx(
       value :: env,
-      ty :: types,
       Binding.Defined :: bindings,
       name :: names,
-      nameMap + (name -> env.length)
+      nameMap + (name -> (env.length, ty))
     )
   def define(name: Name, ty: Val): Ctx =
     define(name, Val.Var(env.length), ty)
   def bind(name: Name, value: Val, ty: Val): Ctx =
     Ctx(
       value :: env,
-      ty :: types,
       Binding.Bound :: bindings,
       name :: names,
-      nameMap + (name -> env.length)
+      nameMap + (name -> (env.length, ty))
     )
   def bind(name: Name, ty: Val): Ctx =
     bind(name, Val.Var(env.length), ty)
@@ -53,4 +47,4 @@ case class Ctx(
   def nextVal: Val = Val.Var(env.length)
 
 object Ctx:
-  def empty: Ctx = Ctx(List(), List(), List(), List(), Map())
+  def empty: Ctx = Ctx(List(), List(), List(), Map())
