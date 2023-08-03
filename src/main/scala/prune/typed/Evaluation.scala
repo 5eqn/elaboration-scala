@@ -4,7 +4,8 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.U =>
     Val.U
   case Term.Inserted(metaID, bindings) =>
-    Meta.value(metaID)(Spine(Env.filter(env, bindings)))
+    // Env.filter now returns List[Param] directly
+    Meta.value(metaID)(Env.filter(env, bindings))
   case Term.Meta(metaID) =>
     Meta.value(metaID)
   case Term.Var(index) =>
