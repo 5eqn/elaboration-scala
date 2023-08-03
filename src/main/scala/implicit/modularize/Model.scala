@@ -1,9 +1,23 @@
 package `implicit`.modularize
 
+type Types = List[Val]
+
+enum Binding:
+  case Bound
+  case Defined
+
+type Bindings = List[Binding]
+
 type Name = String
 type Index = Int
 type Level = Int
+
 type Env = List[Val]
+
+object Env:
+  def filter(env: Env, bd: Bindings) =
+    env.zip(bd).filter((v, b) => b == Binding.Bound).map(_._1)
+
 type Spine = List[Val]
 
 enum Raw:

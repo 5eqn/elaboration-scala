@@ -4,6 +4,18 @@ import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.util.parsing.input.NoPosition
 
+type Types = List[Val]
+type Names = List[Name]
+type Bindings = List[Binding]
+
+enum Binding:
+  case Bound
+  case Defined
+
+object Env:
+  def filter(env: Env, bd: Bindings) =
+    env.zip(bd).filter((v, b) => b == Binding.Bound).map(_._1)
+
 type Name = String
 type Index = Int
 type Level = Int

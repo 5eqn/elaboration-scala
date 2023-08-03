@@ -9,6 +9,7 @@ enum InnerError extends Exception:
   case SpineMismatch()
   case PruningRename()
   case PlainUnifyError()
+  case DuplicatedSolve()
   case InferNamedLambda()
   case IntersectionRename()
   case NameNotFound(name: Name)
@@ -25,6 +26,8 @@ enum InnerError extends Exception:
       "Pruning is currently not supported"
     case PlainUnifyError() =>
       "Values obviously inconsistent"
+    case DuplicatedSolve() =>
+      "Attempt to solve the same meta twice"
     case InferNamedLambda() =>
       "Can't infer type of named lambda"
     case IntersectionRename() =>

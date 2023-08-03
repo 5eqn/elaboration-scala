@@ -43,18 +43,18 @@ def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
       )
 
 def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
-  val pr = invert(envLen, sp)
-  val tm = rename(lhs, pr, rhs)
-  Meta.solve(
-    lhs,
-    eval(
-      List(),
-      sp.foldLeft((tm, 0))((pair, param) =>
-        val (term, lvl) = pair
-        (Term.Lam("x" + lvl, term, param.icit), lvl + 1)
-      )._1
-    )
-  )
+  Meta.state(lhs) match
+    case MetaState.Unsolved(ty) =>
+      val pr = invert(envLen, sp)
+      val tm = rename(lhs, pr, rhs)
+      val boxed = sp
+        .foldLeft((tm, 0))((pair, param) =>
+          val (term, lvl) = pair
+          (Term.Lam("x" + lvl, term, param.icit), lvl + 1)
+        )
+        ._1
+      Meta.solve(lhs, eval(List(), boxed), ty)
+    case MetaState.Solved(_, _) => throw InnerError.DuplicatedSolve()
 
 def unify(envLen: Level, x: Val, y: Val): Unit =
   val unifySp = (spx: Spine, spy: Spine) =>

@@ -1,5 +1,16 @@
 package `implicit`.model
 
+type Types = List[Val]
+type Bindings = List[Binding]
+
+enum Binding:
+  case Bound
+  case Defined
+
+object Env:
+  def filter(env: Env, bd: Bindings) =
+    env.zip(bd).filter((v, b) => b == Binding.Bound).map(_._1)
+
 type Name = String
 type Index = Int
 type Level = Int
