@@ -1,4 +1,4 @@
-package prune.model
+package prune.typed
 
 type MetaID = Int
 

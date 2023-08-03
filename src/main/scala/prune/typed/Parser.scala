@@ -1,4 +1,4 @@
-package prune.model
+package prune.typed
 
 import scala.util.parsing.combinator.{Parsers, RegexParsers}
 import scala.util.parsing.input.CharSequenceReader

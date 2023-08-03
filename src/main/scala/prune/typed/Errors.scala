@@ -1,4 +1,4 @@
-package prune.model
+package prune.typed
 
 case class RootError(ctx: Ctx, tm: Raw, next: InnerError) extends Exception:
   override def getMessage(): String =
@@ -13,6 +13,7 @@ enum InnerError extends Exception:
   case InferNamedLambda()
   case IntersectionRename()
   case NameNotFound(name: Name)
+  case IndexNotFound(index: Index)
   case ImplicitArgNotFound(name: Name)
   case IcitMismatch(lhs: Icit, rhs: Icit)
   case BadApplication(fn: Val, arg: Param)
@@ -34,6 +35,8 @@ enum InnerError extends Exception:
       "Intersection renaming is currently not supported"
     case NameNotFound(name) =>
       s"Name $name not found in context"
+    case IndexNotFound(index) =>
+      s"Index $index not found in environment"
     case ImplicitArgNotFound(name) =>
       s"Implicit argument $name not found"
     case IcitMismatch(lhs, rhs) =>

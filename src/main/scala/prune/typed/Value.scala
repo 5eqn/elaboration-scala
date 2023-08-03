@@ -1,11 +1,14 @@
 // group all value-related types together
-package prune.model
+package prune.typed
 
 type Env = List[Val]
 
 object Env:
   def filter(env: Env, prun: Pruning) =
     env.zip(prun).filter((v, b) => b != Mask.Pruned).map(_._1)
+  def get(env: Env, index: Index) =
+    try env(index)
+    catch case _ => throw InnerError.IndexNotFound(index)
 
 type Spine = List[Param]
 

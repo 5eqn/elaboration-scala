@@ -1,5 +1,5 @@
 // group all term-related types together
-package prune.model
+package prune.typed
 
 // `Mask` is the new `Binding` to allow better interpolation between `Pruning`.
 enum Mask:
@@ -17,7 +17,10 @@ type Locals = List[Local]
 
 object Locals:
   def toTerm(loc: Locals, initTy: Term): Term =
-    loc.foldRight(initTy)((local, term) =>
+    // here `local` is the last to be processed
+    // it's also the first defined / bound term
+    // so it makes sense for it to have no context
+    loc.foldLeft(initTy)((term, local) =>
       local match
         case Local.Bind(name, ty)         => Term.Pi(name, ty, term, Icit.Expl)
         case Local.Define(name, ty, body) => Term.Let(name, ty, body, term)

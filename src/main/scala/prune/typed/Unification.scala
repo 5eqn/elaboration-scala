@@ -1,4 +1,4 @@
-package prune.model
+package prune.typed
 
 case class PartialRenaming(cod: Level, dom: Level, map: Map[Level, Level]):
   def lift: PartialRenaming =

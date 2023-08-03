@@ -1,4 +1,4 @@
-package prune.model
+package prune.typed
 
 enum Icit:
   case Expl

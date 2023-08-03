@@ -1,4 +1,4 @@
-package prune.model
+package prune.typed
 
 def eval(env: Env, tm: Term): Val = tm match
   case Term.U =>
@@ -8,7 +8,7 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.Meta(metaID) =>
     Meta.value(metaID)
   case Term.Var(index) =>
-    env(index)
+    Env.get(env, index)
   case Term.App(func, arg, i) =>
     eval(env, func)(Param(eval(env, arg), i))
   case Term.Lam(param, body, i) =>
