@@ -155,7 +155,7 @@ enum Val:
     case Lam(param, cl, _)   => cl(u.value)
     case Rigid(level, spine) => Rigid(level, u :: spine)
     case Flex(metaID, spine) => Flex(metaID, u :: spine)
-    case _                   => throw new InnerError.BadApplication(this, u)
+    case _                   => throw InnerError.BadApplication(this, u)
 
   def apply(sp: Spine): Val =
     sp.foldRight(this)((value, term) => term(value))

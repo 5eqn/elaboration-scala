@@ -11,7 +11,7 @@ case class Ctx(
     try nameMap(name)
     catch
       case _ =>
-        throw new InnerError.NameNotFound(name)
+        throw InnerError.NameNotFound(name)
 
   def add(
       name: Name,

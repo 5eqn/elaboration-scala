@@ -1,4 +1,4 @@
-package prune.typed
+package prune.scope
 
 type MetaID = Int
 
@@ -18,11 +18,15 @@ object Meta:
   def state(metaID: MetaID): MetaState = map(metaID)
 
   // manipulating `Meta`s require type now
-  def fresh(ctx: Ctx, ty: Val): Term =
+  def create(ty: Val): Term =
     metaCount += 1
-    map += (metaCount -> MetaState.Unsolved(
-      eval(List(), Locals.toTerm(ctx.locals, quote(ctx.envLen, ty)))
-    ))
-    Term.Inserted(Term.Meta(metaCount), ctx.prun)
+    map += (metaCount -> MetaState.Unsolved(ty))
+    // println(s"?$metaCount: ${ty.read(Ctx.empty)}")
+    Term.Meta(metaCount)
+  def fresh(ctx: Ctx, ty: Val): Term =
+    val term = Locals.toTerm(ctx.locals, quote(ctx.envLen, ty))
+    val meta = create(eval(List(), term))
+    Term.Inserted(meta, ctx.prun)
   def solve(metaID: MetaID, value: Val, ty: Val): Unit =
+    // println(s"?$metaID = ${value.read(Ctx.empty)}")
     map += (metaID -> MetaState.Solved(value, ty))
