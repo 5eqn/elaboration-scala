@@ -12,7 +12,7 @@ case class Ctx(
     try nameMap(name)
     catch
       case _ =>
-        throw new InnerError.NameNotFound(name)
+        throw InnerError.NameNotFound(name)
   def define(name: Name, value: Val, ty: Val): Ctx =
     Ctx(
       value :: env,

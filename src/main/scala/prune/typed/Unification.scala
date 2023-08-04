@@ -8,7 +8,7 @@ case class PartialRenaming(cod: Level, dom: Level, map: Map[Level, Level]):
     try Term.Var(dom - map(level) - 1)
     catch
       case _ =>
-        throw new InnerError.PruningRename()
+        throw InnerError.PruningRename()
 
 def invert(envLen: Level, spine: Spine): PartialRenaming =
   spine.foldRight(PartialRenaming(envLen, 0, Map()))((param, pr) =>
@@ -28,7 +28,7 @@ def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
     case Val.U =>
       Term.U
     case Val.Flex(rhs, spine) =>
-      if rhs == lhs then throw new InnerError.IntersectionRename()
+      if rhs == lhs then throw InnerError.IntersectionRename()
       else renameSp(spine, Term.Meta(rhs))
     case Val.Rigid(level, spine) =>
       renameSp(spine, pr.getTerm(level))
@@ -75,7 +75,7 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
       val value = Val.Var(envLen)
       unify(envLen + 1, x(Param(value, i)), cl(value))
     case (Val.Pi(param1, ty1, cl1, i1), Val.Pi(param2, ty2, cl2, i2)) =>
-      if i1 != i2 then throw new InnerError.IcitMismatch(i1, i2)
+      if i1 != i2 then throw InnerError.IcitMismatch(i1, i2)
       val value = Val.Var(envLen)
       unify(envLen, ty1, ty2)
       unify(
@@ -83,10 +83,10 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
         cl1(value),
         cl2(value)
       )
-    case _ => throw new InnerError.PlainUnifyError()
+    case _ => throw InnerError.PlainUnifyError()
 
 def unifyCatch(ctx: Ctx, x: Val, y: Val): Unit =
   try unify(ctx.envLen, x, y)
   catch
     case e: InnerError =>
-      throw new InnerError.UnifyError(ctx, x, y, e)
+      throw InnerError.UnifyError(ctx, x, y, e)

@@ -1,4 +1,4 @@
-package prune.typed
+package prune.scope
 
 def eval(env: Env, tm: Term): Val = tm match
   case Term.U =>

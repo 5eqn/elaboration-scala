@@ -1,5 +1,5 @@
 // group all value-related types together
-package prune.typed
+package prune.scope
 
 type Env = List[Val]
 
@@ -45,9 +45,11 @@ enum Val:
     sp.foldRight(this)((value, term) => term(value))
 
   def force: Val = this match
-    // TODO recurse this and previous
-    case Flex(metaID, spine) => Meta.value(metaID)(spine)
-    case _                   => this
+    case Flex(metaID, spine) =>
+      Meta.state(metaID) match
+        case MetaState.Unsolved(ty)      => this
+        case MetaState.Solved(value, ty) => value(spine).force
+    case _ => this
 
 object Val:
   def Var(level: Level): Val = Rigid(level, List())

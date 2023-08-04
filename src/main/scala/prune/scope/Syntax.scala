@@ -1,5 +1,5 @@
 // group all term-related types together
-package prune.typed
+package prune.scope
 
 // `Mask` is the new `Binding` to allow better interpolation between `Pruning`.
 enum Mask:
@@ -29,7 +29,6 @@ object Locals:
 enum Term:
   case U
   case Meta(metaID: MetaID)
-  // generalize over Inserted so that the func doesn't have to be Meta
   case Inserted(func: Term, prun: Pruning)
   case Var(index: Index)
   case App(func: Term, arg: Term, icit: Icit)
