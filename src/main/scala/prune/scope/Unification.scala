@@ -13,11 +13,12 @@ case class PartialRenaming(
   def withOcc(occ: MetaID): PartialRenaming =
     PartialRenaming(cod, dom, map, Some(occ))
   def nextCod: Val = Val.Var(cod)
+
   // direct access to term
   def getTermDirect(level: Level): Term =
     Term.Var(dom - level - 1)
   def getTerm(level: Level): Term =
-    try Term.Var(dom - map(level) - 1)
+    try getTermDirect(map(level))
     catch
       case _ =>
         throw InnerError.MetaRenameOutOfBound()
@@ -71,7 +72,7 @@ def pruneTy2(prun: Pruning, ty: Val): Term =
 
 // prune the type of a meta and generate a new equation
 // for example to prune `A` from `?0 : A -> B -> C`,
-// we get `?1 : B -> C` and `?0 = \a b. ?1 b`, returns `?1`
+// we get `?1 : B -> C` and `?0 = \a b. <inserted: ?1 b>`, returns `?1`
 def pruneMeta(prun: Pruning, metaID: MetaID): Term =
   Meta.state(metaID) match
     case MetaState.Unsolved(ty) =>
@@ -110,7 +111,7 @@ enum PruneVFlexState:
 // prune a Val.Flex, which is a meta applied to a spine
 // prunes meta type and spine at the same time
 // for example to prune B from ?0 : A -> B -> X -> Y, ?0 a b x,
-// we get ?1 : A -> X -> Y, ?0 = \a b. ?1 a, returns ?1 a x
+// we get ?1 : A -> X -> Y, ?0 = \a b. <inserted: ?1 a>, returns ?1 a x
 // a haskell-ish implementation which is again very similar to the original
 def pruneVFlex(pren: PartialRenaming, metaID: MetaID, spine: Spine): Term =
   Meta.state(metaID) match

@@ -2,7 +2,6 @@ package prune.scope
 
 type MetaID = Int
 
-// add type to metas
 enum MetaState:
   case Unsolved(ty: Val)
   case Solved(value: Val, ty: Val)
@@ -22,7 +21,7 @@ object Meta:
   // interface for getting type
   def state(metaID: MetaID): MetaState = map(metaID)
 
-  // manipulating `Meta`s require type now
+  // separate functions for incrementing MetaID and constructing Term
   def create(ty: Val): MetaID =
     metaCount += 1
     map += (metaCount -> MetaState.Unsolved(ty))

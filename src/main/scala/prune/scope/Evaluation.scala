@@ -4,7 +4,6 @@ def eval(env: Env, tm: Term): Val = tm match
   case Term.U =>
     Val.U
   case Term.Inserted(func, bindings) =>
-    // Env.filter now returns List[Param] directly
     eval(env, func)(Env.filter(env, bindings))
   case Term.Meta(metaID) =>
     Meta.value(metaID)
