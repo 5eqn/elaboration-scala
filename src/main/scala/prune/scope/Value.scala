@@ -1,4 +1,3 @@
-// group all value-related types together
 package prune.scope
 
 type Env = List[Val]
@@ -7,7 +6,6 @@ object Env:
   def filter(env: Env, prun: Pruning) =
     env
       .zip(prun)
-      // filter should add icit information to result
       .collect { case (v, Mask.Keep(i)) =>
         Param(v, i)
       }

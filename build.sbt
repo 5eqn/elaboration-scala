@@ -2,6 +2,7 @@ val scala3Version = "3.3.0"
 
 lazy val root = project
   .in(file("."))
+  .enablePlugins(JmhPlugin)
   .settings(
     name := "elaboration-scala3",
     version := "0.1.0-SNAPSHOT",

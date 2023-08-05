@@ -56,8 +56,11 @@ enum Val:
     sp.foldRight(this)((value, term) => term(value))
 
   def force: Val = this match
-    case Flex(metaID, spine) => Meta.value(metaID)(spine)
-    case _                   => this
+    case Flex(metaID, spine) =>
+      Meta.map(metaID) match
+        case MetaState.Unsolved      => this
+        case MetaState.Solved(value) => value(spine).force
+    case _ => this
 
 object Val:
   def Var(level: Level): Val = Rigid(level, List())
