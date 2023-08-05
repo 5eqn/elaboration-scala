@@ -97,8 +97,11 @@ enum Val:
   // WHNF: suppose `S` is a constructor, S _ is WHNF, ?0 _ is not WHNF
   // WHNF doesn't care what the spine is
   def force: Val = this match
-    case Flex(metaID, spine) => Meta.value(metaID)(spine)
-    case _                   => this
+    case Flex(metaID, spine) =>
+      Meta.map(metaID) match
+        case MetaState.Unsolved      => this
+        case MetaState.Solved(value) => value(spine).force
+    case _ => this
 
 object Val:
   def Var(level: Level): Val = Rigid(level, List())
