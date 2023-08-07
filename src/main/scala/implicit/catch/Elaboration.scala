@@ -111,11 +111,11 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
         val bodyVal =
           check(ctx.bind(s"auto#$param", paramVal, ty), tm, cl(paramVal))
         Term.Lam(param, bodyVal, Icit.Impl)
-      case _ =>
-        val (ttm, tty) = infer(ctx, tm)
-        val (term, value) = insertPassive(ctx, ttm, tty)
-        unifyCatch(ctx, value, ty)
-        term
+      case (tm, expected) =>
+        val (tm2, tty) = infer(ctx, tm)
+        val (tm3, inferred) = insertPassive(ctx, tm2, tty)
+        unifyCatch(ctx, expected, inferred)
+        tm3
   catch
     case e: InnerError =>
       throw new RootError(ctx, tm, e)

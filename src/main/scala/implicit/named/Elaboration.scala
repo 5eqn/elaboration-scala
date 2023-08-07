@@ -106,8 +106,7 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
       val paramVal = ctx.nextVal
       val bodyVal = check(ctx.bind(s"?$param", paramVal, ty), tm, cl(paramVal))
       Term.Lam(param, bodyVal, Icit.Impl)
-    case _ =>
-      val (ttm, tty) = infer(ctx, tm)
-      val (term, value) = insertPassive(ctx, ttm, tty)
-      unify(ctx.envLen, value, ty)
-      term
+    case (tm, expected) =>
+      val (tm2, inferred) = infer(ctx, tm)
+      unify(ctx.envLen, expected, inferred)
+      tm2

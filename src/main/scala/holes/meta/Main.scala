@@ -281,7 +281,7 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term = (tm, ty.force) match
     val value = ctx.nextVal
     val bodyVal = check(ctx.add(param, value, ty), body, cl(value))
     Term.Lam(param, bodyVal)
-  case _ =>
-    val (term, value) = infer(ctx, tm)
-    unify(ctx.envLen, value, ty)
-    term
+  case (tm, expected) =>
+    val (tm2, inferred) = infer(ctx, tm)
+    unify(ctx.envLen, expected, inferred)
+    tm2
