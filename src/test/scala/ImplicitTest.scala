@@ -75,7 +75,7 @@ Implicit argument A not found"""
                      ^
 When checking or inferring g(a):
 
-Can't unify 'auto#B(a)' and 'auto#A':
+Can't unify 'auto#A' and 'auto#B(a)':
 
 Values obviously inconsistent"""
     var msg = ""
@@ -129,7 +129,7 @@ Pruning is currently not supported"""
                      ^
 When checking or inferring g(a):
 
-Can't unify 'B(a)' and 'A':
+Can't unify 'A' and 'B(a)':
 
 Values obviously inconsistent"""
     var msg = ""
