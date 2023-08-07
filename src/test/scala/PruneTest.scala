@@ -288,4 +288,47 @@ Values obviously inconsistent"""
     catch case e => msg = e.getMessage()
     assertEquals(msg, expectedMsg)
   }
+
+  test("prune.intersect.intersect") {
+    import prune.intersect._
+    Meta.init()
+    val raw = ScalaParser.parseInput("""
+    -- we use Eq to test unification
+
+    let Eq : {A : U} → A → A → U
+        = λ {A} x y. (P : A → U) → P x → P y;
+    let refl : {A : U}{x : A} → Eq {A} x x
+        = λ _ px. px;
+    
+    -- inline type annotation
+    let the : (A : U) → A → A = λ _ x. x;
+
+    let m : U → U → U → U = _;
+    let test = λ a b c. the (Eq (m a b c) (m c b a)) refl;
+    U
+    """)
+    val ctx = Ctx.empty
+    val (term, tty) = infer(ctx, raw)
+    val metaStr = Meta.read
+    val expectedMetaStr = """?0 : (_ : U) -> ((_ : U) -> ((_ : U) -> (U))) = λx0. λx1. λx2. ?8(x1)
+?1 : U = (a : U) -> ((b : U) -> ((c : U) -> ((P : (_ : U) -> (U)) -> ((_ : P(?8(b))) -> (P(?8(b)))))))
+?2 : U = U
+?3 : (a : U) -> (U) = λa. U
+?4 : (a : U) -> ((b : U) -> (U)) = λa. λb. U
+?5 : (a : U) -> ((b : U) -> ((c : U) -> (U))) = λa. λb. λc. U
+?6 : (a : U) -> ((b : U) -> ((c : U) -> (U))) = λa. λb. λc. U
+?7 : (a : U) -> ((b : U) -> ((c : U) -> (U))) = λa. λb. λc. ?8(b)
+?8 : (_ : U) -> (U)
+"""
+    assertEquals(metaStr, expectedMetaStr)
+    val termStr = term.read(ctx)
+    val expectedTermStr =
+      """let Eq : {A : U} -> ((_ : A) -> ((_ : A) -> (U))) = λ{A}. λx. λy. (P : (_ : A) -> (U)) -> ((_ : P(x)) -> (P(y)));
+let refl : {A : U} -> ({x : A} -> (Eq{A}(x)(x))) = λ{A}. λ{x}. λ_. λpx. px;
+let the : (A : U) -> ((_ : A) -> (A)) = λ_. λx. x;
+let m : (_ : U) -> ((_ : U) -> ((_ : U) -> (U))) = ?0;
+let test : ?1 = λa. λb. λc. the(Eq{?5 c b a}(m(a)(b)(c))(m(c)(b)(a)))(refl{?6 c b a}{?7 c b a});
+U"""
+    assertEquals(termStr, expectedTermStr)
+  }
 }
