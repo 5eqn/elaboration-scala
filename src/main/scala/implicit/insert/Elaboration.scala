@@ -107,9 +107,9 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term = (tm, ty.force) match
     val paramVal = ctx.nextVal
     val bodyVal = check(ctx.bind(s"?$param", paramVal, ty), tm, cl(paramVal))
     Term.Lam(param, bodyVal, Icit.Impl)
-  case _ =>
-    val (ttm, tty) = infer(ctx, tm)
+  case (tm, expected) =>
+    val (tm2, tty) = infer(ctx, tm)
     // insert implicit args passively for surface variable
-    val (term, value) = insertPassive(ctx, ttm, tty)
-    unify(ctx.envLen, value, ty)
-    term
+    val (tm3, inferred) = insertPassive(ctx, tm2, tty)
+    unify(ctx.envLen, expected, inferred)
+    tm3
