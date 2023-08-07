@@ -97,6 +97,7 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     1. prune.typed (4*)
     2. prune.scope (5*)
     3. prune.nonlinear (4*)
+    4. prune.intersect (3*)
 
 ## Benchmarks
 
