@@ -31,10 +31,18 @@ enum Term:
   case Let(name: Name, ty: Term, body: Term, next: Term)
 
   def read(ctx: Ctx): String = this match
-    case U                   => "U"
-    case Meta(metaID)        => s"?$metaID"
-    case Inserted(metaID, _) => "_"
-    case Var(index)          => ctx.names(index)
+    case U            => "U"
+    case Meta(metaID) => s"?$metaID"
+    case Inserted(func, prun) =>
+      func.read(ctx) + prun
+        .zip(ctx.env)
+        .map {
+          case (Mask.Keep(Icit.Expl), value) => s" ${value.read(ctx)}"
+          case (Mask.Keep(Icit.Impl), value) => s" {${value.read(ctx)}}"
+          case (Mask.Pruned, _)              => ""
+        }
+        .mkString("")
+    case Var(index) => ctx.names(index)
     case App(func, arg, icit) =>
       icit match
         case Icit.Expl => s"${func.read(ctx)}(${arg.read(ctx)})"
@@ -51,4 +59,4 @@ enum Term:
           s"{$param : ${ty.read(ctx)}} -> (${body.read(ctx.bind(param, Val.U))})"
     case Let(name, ty, body, next) =>
       s"let $name : ${ty.read(ctx)} = ${body
-          .read(ctx)}; ${next.read(ctx.bind(name, Val.U))}"
+          .read(ctx)};\n${next.read(ctx.bind(name, Val.U))}"

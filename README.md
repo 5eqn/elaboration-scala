@@ -47,12 +47,14 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - When inferring type of function application, when the function's type is meta, I forgot to attempt to unify it with `?0 -> ?1`
     - However, no tests will fail without this
 - Getting type of `Val` *makes no sense*, so there's no need storing a `types` array in `Ctx`
-- I didn't recurse `force`
+- I didn't recurse `force`!
 
 Here are some of my unclear points:
 
-- In elaboration-zoo, `check` checks `Let` separately, is this necessary?
+- In elaboration-zoo 02, `check` checks `Let` separately, is this necessary?
     - Current tests all pass, btw
+- In elaboration-zoo 05, `invert` doesn't prune all nonlinear arguments, it keeps the first occurrence. Is this intended?
+    - I plan to read more materials about pruning later, but currently I'll just keep this as a question
 
 ## Run Tests
 
@@ -62,7 +64,7 @@ Simply run:
 sbt test
 ```
 
-You can also change the test sources to see failed cases!
+You can also change the test sources to see failed cases! Also note that there're built-in tests on failed cases in later chapters.
 
 ## Difficulty Order
 
@@ -93,6 +95,8 @@ More stars, more difficult. Difficulty no more than 5* is acceptable.
     6. implicit.filter (1*)
 5. Pruning
     1. prune.typed (4*)
+    2. prune.scope (5*)
+    3. prune.nonlinear (4*)
 
 ## Benchmarks
 

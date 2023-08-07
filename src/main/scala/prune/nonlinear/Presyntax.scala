@@ -1,4 +1,4 @@
-package prune.scope
+package prune.nonlinear
 
 import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position

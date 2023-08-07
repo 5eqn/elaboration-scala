@@ -1,4 +1,4 @@
-package `implicit`.filter
+package prune.nonlinear
 
 case class RootError(ctx: Ctx, tm: Raw, next: InnerError) extends Exception:
   override def getMessage(): String =
@@ -7,12 +7,16 @@ case class RootError(ctx: Ctx, tm: Raw, next: InnerError) extends Exception:
 
 enum InnerError extends Exception:
   case SpineMismatch()
-  case PruningRename()
   case PlainUnifyError()
   case InferNamedLambda()
+  case PruneNonRenaming()
   case InvertNonRenaming()
   case IntersectionRename()
+  case PruningUnknownError()
+  case MetaRenameOutOfBound()
   case NameNotFound(name: Name)
+  case IndexNotFound(index: Index)
+  case DuplicatedSolve(place: String)
   case ImplicitArgNotFound(name: Name)
   case IcitMismatch(lhs: Icit, rhs: Icit)
   case BadApplication(fn: Val, arg: Param)
@@ -22,18 +26,26 @@ enum InnerError extends Exception:
   def read(ctx: Ctx): String = this match
     case SpineMismatch() =>
       "Length of spine is different"
-    case PruningRename() =>
-      "Pruning is currently not supported"
     case PlainUnifyError() =>
       "Values obviously inconsistent"
     case InferNamedLambda() =>
       "Can't infer type of named lambda"
+    case PruneNonRenaming() =>
+      "Can't prune a non-renaming spine"
+    case IntersectionRename() =>
+      "LHS meta appears in RHS, this is currently not supported"
+    case PruningUnknownError() =>
+      "Pruning failed for unknown reason"
     case InvertNonRenaming() =>
       "Can't invert a non-renaming spine"
-    case IntersectionRename() =>
-      "Intersection renaming is currently not supported"
+    case MetaRenameOutOfBound() =>
+      "Variable out of scope when solving meta"
     case NameNotFound(name) =>
       s"Name $name not found in context"
+    case IndexNotFound(index) =>
+      s"Index $index not found in environment"
+    case DuplicatedSolve(place) =>
+      s"Attempt to solve the same meta twice at $place"
     case ImplicitArgNotFound(name) =>
       s"Implicit argument $name not found"
     case IcitMismatch(lhs, rhs) =>

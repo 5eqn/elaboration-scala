@@ -1,4 +1,4 @@
-package prune.scope
+package prune.nonlinear
 
 def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) =
   try

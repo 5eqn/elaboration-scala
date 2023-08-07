@@ -69,4 +69,4 @@ enum Raw extends Positional:
       icit.match
         case Icit.Expl => s"($param : $ty) -> ($body)"
         case Icit.Impl => s"{$param : $ty} -> ($body)"
-    case Let(name, ty, body, next) => s"let $name : $ty = $body; $next"
+    case Let(name, ty, body, next) => s"let $name : $ty = $body;\n$next"

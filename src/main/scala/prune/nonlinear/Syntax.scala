@@ -1,14 +1,11 @@
-// group all term-related types together
-package prune.typed
+package prune.nonlinear
 
-// `Mask` is the new `Binding` to allow better interpolation between `Pruning`.
 enum Mask:
   case Keep(i: Icit)
   case Pruned
 
 type Pruning = List[Mask]
 
-// `Locals` stores how type of meta can be constructed.
 enum Local:
   case Bind(name: Name, ty: Term)
   case Define(name: Name, ty: Term, tm: Term)
@@ -17,9 +14,6 @@ type Locals = List[Local]
 
 object Locals:
   def toTerm(loc: Locals, initTy: Term): Term =
-    // here `local` is the last to be processed
-    // it's also the first defined / bound term
-    // so it makes sense for it to have no context
     loc.foldLeft(initTy)((term, local) =>
       local match
         case Local.Bind(name, ty)         => Term.Pi(name, ty, term, Icit.Expl)
@@ -29,7 +23,6 @@ object Locals:
 enum Term:
   case U
   case Meta(metaID: MetaID)
-  // generalize over Inserted so that the func doesn't have to be Meta
   case Inserted(func: Term, prun: Pruning)
   case Var(index: Index)
   case App(func: Term, arg: Term, icit: Icit)

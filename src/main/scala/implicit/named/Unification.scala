@@ -11,7 +11,7 @@ def invert(envLen: Level, spine: Spine): PartialRenaming =
       case Val.Rigid(level, List()) =>
         PartialRenaming(pr.cod, pr.dom + 1, pr.map + (level -> pr.dom))
       case _ =>
-        PartialRenaming(pr.cod, pr.dom + 1, pr.map)
+        throw new Exception("can't invert non-renaming spine")
   )
 
 def rename(lhs: MetaID, pr: PartialRenaming, value: Val): Term =
