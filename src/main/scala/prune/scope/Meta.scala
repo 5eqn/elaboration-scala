@@ -12,25 +12,28 @@ object Meta:
   def value(metaID: MetaID): Val = map(metaID) match
     case MetaState.Unsolved(_)      => Val.Meta(metaID)
     case MetaState.Solved(value, _) => value
-
-  // clean meta state for testing
   def init(): Unit =
     map = Map[MetaID, MetaState]()
     metaCount = -1
-
-  // interface for getting type
   def state(metaID: MetaID): MetaState = map(metaID)
 
   // separate functions for incrementing MetaID and constructing Term
   def create(ty: Val): MetaID =
     metaCount += 1
     map += (metaCount -> MetaState.Unsolved(ty))
-    // println(s"?$metaCount: ${ty.read(Ctx.empty)}")
     metaCount
   def fresh(ctx: Ctx, ty: Val): Term =
     val term = Locals.toTerm(ctx.locals, quote(ctx.envLen, ty))
     val meta = create(eval(List(), term))
     Term.Inserted(Term.Meta(meta), ctx.prun)
   def solve(metaID: MetaID, value: Val, ty: Val): Unit =
-    // println(s"?$metaID = ${value.read(Ctx.empty)}")
     map += (metaID -> MetaState.Solved(value, ty))
+  def read: String =
+    var res = ""
+    map.toList.sortBy(_._1).foreach {
+      case (metaID, MetaState.Unsolved(ty)) =>
+        res += s"?$metaID : ${ty.read(Ctx.empty)}\n"
+      case (metaID, MetaState.Solved(value, ty)) =>
+        res += s"?$metaID : ${ty.read(Ctx.empty)} = ${value.read(Ctx.empty)}\n"
+    }
+    res

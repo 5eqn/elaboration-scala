@@ -10,6 +10,7 @@ enum InnerError extends Exception:
   case PlainUnifyError()
   case InferNamedLambda()
   case PruneNonRenaming()
+  case InvertNonRenaming()
   case IntersectionRename()
   case PruningUnknownError()
   case MetaRenameOutOfBound()
@@ -31,6 +32,8 @@ enum InnerError extends Exception:
       "Can't infer type of named lambda"
     case PruneNonRenaming() =>
       "Can't prune a non-renaming spine"
+    case InvertNonRenaming() =>
+      "Can't invert a non-renaming spine"
     case IntersectionRename() =>
       "LHS meta appears in RHS, this is currently not supported"
     case PruningUnknownError() =>

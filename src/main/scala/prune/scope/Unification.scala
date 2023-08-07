@@ -50,21 +50,20 @@ def pruneTy(prun: Pruning, ty: Val): Term =
 
 // a non-tail-recursive implementation, but less readable
 // benchmark result is 25% better than the tail-recursive one
+// we'll stick with this implementation later
 def pruneTy2(prun: Pruning, ty: Val): Term =
   val (pr, remTy, tmMaker) = prun
     .foldRight((PartialRenaming(0, 0, Map(), None), ty, identity[Term]))(
       (mask, pair) =>
         val (pr, ty, tmMaker) = pair
-        ty.force match
-          case Val.Pi(param, ty, cl, icit) =>
-            mask match
-              case Mask.Pruned =>
-                (pr.skip, cl(pr.nextCod), tmMaker)
-              case Mask.Keep(_) =>
-                // map later variables to the right of Pi chain
-                def f(tm: Term) =
-                  tmMaker(Term.Pi(param, rename(pr, ty), tm, icit))
-                (pr.lift, cl(pr.nextCod), f)
+        (ty.force, mask) match
+          case (Val.Pi(param, ty, cl, icit), Mask.Keep(_)) =>
+            // map later variables to the right of Pi chain
+            def f(tm: Term) =
+              tmMaker(Term.Pi(param, rename(pr, ty), tm, icit))
+            (pr.lift, cl(pr.nextCod), f)
+          case (Val.Pi(_, _, cl, _), Mask.Pruned) =>
+            (pr.skip, cl(pr.nextCod), tmMaker)
           case _ => throw InnerError.PruningUnknownError()
     )
   // renamed remTy will be sent to Pi chain's return type
@@ -157,6 +156,7 @@ def pruneVFlex(pren: PartialRenaming, metaID: MetaID, spine: Spine): Term =
       throw InnerError.DuplicatedSolve("pruneVFlex")
 
 // An more readable implementation utilizing mutable variables
+// we'll stick with this implementation later
 def pruneVFlex2(pren: PartialRenaming, metaID: MetaID, spine: Spine): Term =
   Meta.state(metaID) match
     case MetaState.Unsolved(ty) =>
@@ -202,7 +202,7 @@ def invert(envLen: Level, spine: Spine): PartialRenaming =
       case Val.Rigid(level, List()) =>
         PartialRenaming(pr.cod, pr.dom + 1, pr.map + (level -> pr.dom), pr.occ)
       case _ =>
-        PartialRenaming(pr.cod, pr.dom + 1, pr.map, pr.occ)
+        throw InnerError.InvertNonRenaming()
   )
 
 def rename(pr: PartialRenaming, value: Val): Term =

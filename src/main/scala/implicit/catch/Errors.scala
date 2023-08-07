@@ -12,6 +12,7 @@ enum InnerError extends Exception:
   case PruningRename()
   case PlainUnifyError()
   case InferNamedLambda()
+  case InvertNonRenaming()
   case IntersectionRename()
   case NameNotFound(name: Name)
   case ImplicitArgNotFound(name: Name)
@@ -29,6 +30,8 @@ enum InnerError extends Exception:
       "Values obviously inconsistent"
     case InferNamedLambda() =>
       "Can't infer type of named lambda"
+    case InvertNonRenaming() =>
+      "Can't invert a non-renaming spine"
     case IntersectionRename() =>
       "Intersection renaming is currently not supported"
     case NameNotFound(name) =>

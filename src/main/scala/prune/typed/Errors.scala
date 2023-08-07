@@ -11,6 +11,7 @@ enum InnerError extends Exception:
   case PlainUnifyError()
   case DuplicatedSolve()
   case InferNamedLambda()
+  case InvertNonRenaming()
   case IntersectionRename()
   case NameNotFound(name: Name)
   case IndexNotFound(index: Index)
@@ -31,6 +32,8 @@ enum InnerError extends Exception:
       "Attempt to solve the same meta twice"
     case InferNamedLambda() =>
       "Can't infer type of named lambda"
+    case InvertNonRenaming() =>
+      "Can't invert a non-renaming spine"
     case IntersectionRename() =>
       "Intersection renaming is currently not supported"
     case NameNotFound(name) =>
