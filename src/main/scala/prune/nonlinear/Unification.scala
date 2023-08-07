@@ -157,9 +157,7 @@ def solve(
       prun match
         case None     => ty
         case Some(pr) => pruneTy(pr, ty)
-      if debug then println(s"[DEBUG] start rename, pren=$pren rhs=$rhs")
       val tm = rename(pren.withOcc(lhs), rhs)
-      if debug then println(s"[DEBUG] rename successful, tm=$tm")
       val boxed = lams(pren.dom, ty, tm)
       Meta.solve(lhs, eval(List(), boxed), ty)
     case MetaState.Solved(_, _) => throw InnerError.DuplicatedSolve("solve")

@@ -8,5 +8,3 @@ type Name = String
 type Names = List[Name]
 type Index = Int
 type Level = Int
-
-var debug = false
