@@ -331,4 +331,27 @@ let test : ?1 = λa. λb. λc. the(Eq{?5 c b a}(m(a)(b)(c))(m(c)(b)(a)))(refl{?6
 U"""
     assertEquals(termStr, expectedTermStr)
   }
+
+  test("prune.intersect.fcpoly") {
+    import prune.nonlinear._
+    Meta.init()
+    val raw = ScalaParser.parseInput("""
+    let Maybe : U → U = \A. {M : U → U} → ({A} → A → M A) → ({A} → M A) → M A;
+    let foo : Maybe ({A} → A → A) = \Just Nothing. Just (λ x. x);
+    U
+    """)
+    val ctx = Ctx.empty
+    val expectedMsg = """At Line 3 Column 52:
+    let foo : Maybe ({A} → A → A) = \Just Nothing. Just (λ x. x);
+                                                   ^
+When checking or inferring Just(λx. x):
+
+Can't unify 'M({A : U} -> ((_ : A) -> (A)))' and 'M((x : ?4(M)(Just)(Nothing)) -> (?4(M)(Just)(Nothing)))':
+
+Icit mismatch: lhs is Impl, but rhs is Expl"""
+    var msg = ""
+    try infer(ctx, raw)
+    catch case e => msg = e.getMessage()
+    assertEquals(msg, expectedMsg)
+  }
 }
