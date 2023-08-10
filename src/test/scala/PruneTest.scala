@@ -85,15 +85,15 @@ let nil : {A : ?18} -> (List(A)) = λ{A}. λL. λcons. λnil. nil;
 let cons : {A : ?19} -> ((_ : A) -> ((_ : List(A)) -> (List(A)))) = λ{A}. λx. λxs. λL. λcons. λnil. cons(x)(xs(L)(cons)(nil));
 let map : {A : ?20} -> ({B : ?21 A} -> ((_ : (_ : A) -> (B)) -> ((_ : List(A)) -> (List(B))))) = λ{A}. λ{B}. λf. λxs. λL. λc. λn. xs(L)(λa. c(f(a)))(n);
 let list1 : List(Bool) = cons{?22}(true)(cons{?23}(false)(cons{?24}(true)(nil{?25})));
-let comp : {A : ?26} -> ({B : (_ : A) -> (U)} -> ({C : {a : ?27 B A} -> ((_ : B(a)) -> (U))} -> ((f : {a : ?28 C B A} -> ((b : B(a)) -> (C{?29 b a C B A}(b)))) -> ((g : (a : A) -> (B(a))) -> ((a : A) -> (C{?30 a g f C B A}(g(a)))))))) = λ{A}. λ{B}. λ{C}. λf. λg. λa. f{?31 a g f C B A}(g(a));
+let comp : {A : ?26} -> ({B : (_ : A) -> (U)} -> ({C : {a : ?27 A B} -> ((_ : B(a)) -> (U))} -> ((f : {a : ?28 A B C} -> ((b : B(a)) -> (C{?29 A B C a b}(b)))) -> ((g : (a : A) -> (B(a))) -> ((a : A) -> (C{?30 A B C f g a}(g(a)))))))) = λ{A}. λ{B}. λ{C}. λf. λg. λa. f{?31 A B C f g a}(g(a));
 let compExample : ?32 = comp{?33}{?34}{?35}(λ{a}. cons{?36 a}(true))(cons{?37}(false))(nil{?38});
 let Nat : U = (N : U) -> ((_ : (_ : N) -> (N)) -> ((_ : N) -> (N)));
-let mul : (_ : Nat) -> ((_ : Nat) -> (Nat)) = λa. λb. λN. λs. λz. a(?39 z s N b a)(b(?40 z s N b a)(s))(z);
+let mul : (_ : Nat) -> ((_ : Nat) -> (Nat)) = λa. λb. λN. λs. λz. a(?39 a b N s z)(b(?40 a b N s z)(s))(z);
 let ten : Nat = λN. λs. λz. s(s(s(s(s(s(s(s(s(s(z))))))))));
 let hundred : ?41 = mul(ten)(ten);
 let Eq : {A : ?42} -> ((_ : A) -> ((_ : A) -> (U))) = λ{A}. λx. λy. (P : (_ : A) -> (U)) -> ((_ : P(x)) -> (P(y)));
-let refl : {A : ?43} -> ({x : A} -> (Eq{?44 x A}(x)(x))) = λ{A}. λ{x}. λ_. λpx. px;
-let sym : {A : ?45} -> ({x : ?46 A} -> ({y : ?47 x A} -> ((_ : Eq{A}(x)(y)) -> (Eq{?48 _ y x A}(y)(x))))) = λ{A}. λ{x}. λ{y}. λp. p(λy. Eq{?49 y p y x A}(y)(x))(refl{?50 p y x A}{?51 p y x A});
+let refl : {A : ?43} -> ({x : A} -> (Eq{?44 A x}(x)(x))) = λ{A}. λ{x}. λ_. λpx. px;
+let sym : {A : ?45} -> ({x : ?46 A} -> ({y : ?47 A x} -> ((_ : Eq{A}(x)(y)) -> (Eq{?48 A x y _}(y)(x))))) = λ{A}. λ{x}. λ{y}. λp. p(λy. Eq{?49 A x y p y}(y)(x))(refl{?50 A x y p}{?51 A x y p});
 the(Eq{?52}(mul(ten)(ten))(hundred))(refl{?53}{?54})"""
     assertEquals(termStr, expectedTermStr)
   }
@@ -218,7 +218,7 @@ U"""
 let refl : {A : U} -> ({x : A} -> (Eq{A}(x)(x))) = λ{A}. λ{x}. λ_. λpx. px;
 let the : (A : U) -> ((_ : A) -> (A)) = λ_. λx. x;
 let m : (A : U) -> ((B : U) -> ((_ : U) -> ((_ : U) -> (U)))) = ?0;
-let test : ?1 = λa. λb. the(Eq{?4 b a}(m(a)(a))(λx. λy. y))(refl{?5 b a}{?6 b a});
+let test : ?1 = λa. λb. the(Eq{?4 a b}(m(a)(a))(λx. λy. y))(refl{?5 a b}{?6 a b});
 U"""
     assertEquals(termStr, expectedTermStr)
   }
@@ -327,7 +327,7 @@ Values obviously inconsistent"""
 let refl : {A : U} -> ({x : A} -> (Eq{A}(x)(x))) = λ{A}. λ{x}. λ_. λpx. px;
 let the : (A : U) -> ((_ : A) -> (A)) = λ_. λx. x;
 let m : (_ : U) -> ((_ : U) -> ((_ : U) -> (U))) = ?0;
-let test : ?1 = λa. λb. λc. the(Eq{?5 c b a}(m(a)(b)(c))(m(c)(b)(a)))(refl{?6 c b a}{?7 c b a});
+let test : ?1 = λa. λb. λc. the(Eq{?5 a b c}(m(a)(b)(c))(m(c)(b)(a)))(refl{?6 a b c}{?7 a b c});
 U"""
     assertEquals(termStr, expectedTermStr)
   }
