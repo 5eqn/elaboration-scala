@@ -48,6 +48,7 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
     - However, no tests will fail without this
 - Getting type of `Val` *makes no sense*, so there's no need storing a `types` array in `Ctx`
 - I didn't recurse `force`!
+- I forgot to reverse spine when pretty printing
 
 Here are some of my unclear points:
 
