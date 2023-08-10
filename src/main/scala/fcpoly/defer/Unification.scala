@@ -1,4 +1,4 @@
-package fcpoly.tylam
+package fcpoly.defer
 
 case class PartialRenaming(
     cod: Level,
@@ -149,6 +149,8 @@ def solve(
       val tm = rename(pren.withOcc(lhs), rhs)
       val boxed = lams(pren.dom, ty, tm)
       Meta.solve(lhs, eval(List(), boxed), ty)
+      // solve meta blocked on it in the next chapter
+      ()
     case MetaState.Solved(_, _) => throw InnerError.DuplicatedSolve("solve")
 
 def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
@@ -213,3 +215,17 @@ def unifyCatch(ctx: Ctx, x: Val, y: Val): Unit =
   catch
     case e: InnerError =>
       throw InnerError.UnifyError(ctx, x.force, y.force, e)
+
+// check if assumption `tm = ?metaID locals` can still be satisfied
+def unifyPlaceholder(ctx: Ctx, tm: Term, metaID: MetaID): Unit =
+  Meta.state(metaID) match
+    case MetaState.Unsolved(ty) =>
+      // meta is unsolved, use trivial lambdas as solution
+      Meta.solve(metaID, eval(List(), Locals.toLams(ctx.locals, tm)), ty)
+      // retry check problems blocked on metaID in the next chapter
+      ()
+    case MetaState.Solved(value, ty) =>
+      // meta is solved, apply locals first
+      val fullVal = value(Env.filter(ctx.env, ctx.prun))
+      // unify full value with original terms
+      unifyCatch(ctx, eval(ctx.env, tm), fullVal)

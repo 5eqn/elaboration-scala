@@ -36,6 +36,7 @@ enum Term:
     case Inserted(func, prun) =>
       func.read(ctx) + prun
         .zip(ctx.env)
+        .reverse
         .map {
           case (Mask.Keep(Icit.Expl), value) => s" ${value.read(ctx)}"
           case (Mask.Keep(Icit.Impl), value) => s" {${value.read(ctx)}}"
