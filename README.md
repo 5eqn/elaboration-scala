@@ -49,6 +49,7 @@ This project is rewritten from memory, when something goes wrong, I refer to ori
 - Getting type of `Val` *makes no sense*, so there's no need storing a `types` array in `Ctx`
 - I didn't recurse `force`!
 - I forgot to reverse spine when pretty printing
+- I used `ctx.bind` instead of `ctx.define` when pretty-printing `let`
 
 Here are some of my unclear points:
 

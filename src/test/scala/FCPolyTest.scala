@@ -25,6 +25,7 @@ Values obviously inconsistent"""
   test("fcpoly.defer.fcpoly") {
     import fcpoly.defer._
     Meta.init()
+    Check.init()
     val raw = ScalaParser.parseInput("""
     let Maybe : U → U = \A. {M : U → U} → ({A} → A → M A) → ({A} → M A) → M A;
     let foo : Maybe ({A} → A → A) = \Just Nothing. Just (λ x. x);
@@ -47,7 +48,7 @@ Values obviously inconsistent"""
     val ts = tm.read(ctx)
     val ets =
       """let Maybe : (_ : U) -> (U) = λA. {M : (_ : U) -> (U)} -> ((_ : {A : ?0 A M} -> ((_ : A) -> (M(A)))) -> ((_ : {A : ?1 A M _} -> (M(A))) -> (M(A))));
-let foo : Maybe({A : ?2 Maybe} -> ((_ : A) -> (A))) = λ{M}. λJust. λNothing. Just{?3 Maybe M Just Nothing}(λ{A}. λx. x);
+let foo : Maybe({A : ?2} -> ((_ : A) -> (A))) = λ{M}. λJust. λNothing. Just{?3 M Just Nothing}(λ{A}. λx. x);
 U"""
     assertEquals(ts, ets)
   }
@@ -55,6 +56,7 @@ U"""
   test("fcpoly.block.fcpoly") {
     import fcpoly.block._
     Meta.init()
+    Check.init()
     val raw = ScalaParser.parseInput("""
     let Maybe : U → U = \A. {M : U → U} → ({A} → A → M A) → ({A} → M A) → M A;
     let foo : Maybe ({A} → A → A) = \Just Nothing. Just (λ x. x);
@@ -74,8 +76,48 @@ U"""
     val ts = tm.read(ctx)
     val ets =
       """let Maybe : (_ : U) -> (U) = λA. {M : (_ : U) -> (U)} -> ((_ : {A : ?0 A M} -> ((_ : A) -> (M(A)))) -> ((_ : {A : ?1 A M _} -> (M(A))) -> (M(A))));
-let foo : Maybe({A : ?2 Maybe} -> ((_ : A) -> (A))) = λ{M}. λJust. λNothing. Just{?3 Maybe M Just Nothing}(λ{A}. λx. x);
+let foo : Maybe({A : ?2} -> ((_ : A) -> (A))) = λ{M}. λJust. λNothing. Just{?3 M Just Nothing}(λ{A}. λx. x);
 U"""
     assertEquals(ts, ets)
+  }
+
+  test("fcpoly.block.full") {
+    import fcpoly.block._
+    Meta.init()
+    Check.init()
+    val raw = ScalaParser.parseInput(fcpolyFullTest)
+    val ctx = Ctx.empty
+    val (tm, ty) = infer(ctx, raw)
+    Check.elimAll()
+    val ms = Meta.read
+    val ems = fcpolyFullMeta
+    assertEquals(ms, ems)
+    val ts = tm.read(ctx)
+    val ets = fcpolyFullTerm
+    assertEquals(ts, ets)
+  }
+
+  test("fcpoly.block.polyarg") {
+    import fcpoly.block._
+    Meta.init()
+    Check.init()
+    val raw = ScalaParser.parseInput("""
+    let tm = λ X Y a. λ (f : ({_ : X} -> Y) -> (X -> Y) -> U). f(a)(λ x. a {x});
+    U
+    """)
+    val ctx = Ctx.empty
+    val err = """At Line 2 Column 74:
+    let tm = λ X Y a. λ (f : ({_ : X} -> Y) -> (X -> Y) -> U). f(a)(λ x. a {x});
+                                                                         ^
+When checking or inferring a{x}:
+
+Can't unify 'Y' and '{x : ?5(X)(Y)(a)(f)(x)} -> (?6(X)(Y)(a)(f)(x)(x))':
+
+Values obviously inconsistent"""
+    var msg = ""
+    infer(ctx, raw)
+    try Check.elimAll()
+    catch case e => msg = e.getMessage()
+    assertEquals(msg, err)
   }
 }
