@@ -1,4 +1,4 @@
-package fcpoly.defer
+package fcpoly.block
 
 case class PartialRenaming(
     cod: Level,
@@ -50,9 +50,9 @@ def pruneTy(prun: Pruning, ty: Val): Term =
 
 def pruneMeta(prun: Pruning, metaID: MetaID): Term =
   Meta.state(metaID) match
-    case MetaState.Unsolved(ty) =>
+    case MetaState.Unsolved(blk, ty) =>
       val prunedTy = eval(List(), pruneTy(prun, ty))
-      val newMeta = Term.Meta(Meta.create(prunedTy))
+      val newMeta = Term.Meta(Meta.create(prunedTy, blk))
       val boxed = lams(prun.length, ty, Term.Inserted(newMeta, prun))
       Meta.solve(metaID, eval(List(), boxed), ty)
       newMeta
@@ -61,7 +61,7 @@ def pruneMeta(prun: Pruning, metaID: MetaID): Term =
 
 def pruneVFlex(pren: PartialRenaming, metaID: MetaID, spine: Spine): Term =
   Meta.state(metaID) match
-    case MetaState.Unsolved(ty) =>
+    case MetaState.Unsolved(_, _) =>
       var isRenaming = true
       var inScope = true
       val filtSp = spine.map { param =>
@@ -141,7 +141,7 @@ def solve(
     rhs: Val
 ): Unit =
   Meta.state(lhs) match
-    case MetaState.Unsolved(ty) =>
+    case MetaState.Unsolved(blk, ty) =>
       val (pren, prun) = pair
       prun match
         case None     => ty
@@ -149,6 +149,8 @@ def solve(
       val tm = rename(pren.withOcc(lhs), rhs)
       val boxed = lams(pren.dom, ty, tm)
       Meta.solve(lhs, eval(List(), boxed), ty)
+      // retry blocked checking problems
+      Check.retryAll(blk)
     case MetaState.Solved(_, _) => throw InnerError.DuplicatedSolve("solve")
 
 def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
@@ -214,14 +216,12 @@ def unifyCatch(ctx: Ctx, x: Val, y: Val): Unit =
     case e: InnerError =>
       throw InnerError.UnifyError(ctx, x.force, y.force, e)
 
-// check if assumption `tm = ?metaID locals` can still be satisfied
 def unifyPlaceholder(ctx: Ctx, tm: Term, metaID: MetaID): Unit =
   Meta.state(metaID) match
-    case MetaState.Unsolved(ty) =>
-      // meta is unsolved, use trivial lambdas as solution
+    case MetaState.Unsolved(blk, ty) =>
       Meta.solve(metaID, eval(List(), Locals.toLams(ctx.locals, tm)), ty)
+      // retry blocked checking problems
+      Check.retryAll(blk)
     case MetaState.Solved(value, ty) =>
-      // meta is solved, apply locals first
       val fullVal = value(Env.filter(ctx.env, ctx.prun))
-      // unify full value with original terms
       unifyCatch(ctx, eval(ctx.env, tm), fullVal)
