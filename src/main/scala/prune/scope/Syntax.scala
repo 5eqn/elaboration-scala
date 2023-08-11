@@ -60,4 +60,4 @@ enum Term:
           s"{$param : ${ty.read(ctx)}} -> (${body.read(ctx.bind(param, Val.U))})"
     case Let(name, ty, body, next) =>
       s"let $name : ${ty.read(ctx)} = ${body
-          .read(ctx)};\n${next.read(ctx.bind(name, Val.U))}"
+          .read(ctx)};\n${next.read(ctx.define(name, Val.U, Val.U, Term.U, Term.U))}"
