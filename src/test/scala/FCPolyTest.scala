@@ -120,4 +120,29 @@ Values obviously inconsistent"""
     catch case e => msg = e.getMessage()
     assertEquals(msg, err)
   }
+
+  test("fcpoly.polyarg.polyarg") {
+    import fcpoly.polyarg._
+    Meta.init()
+    Check.init()
+    val raw = ScalaParser.parseInput("""
+    let tm = λ X Y a. λ (f : ({_ : X} -> Y) -> (X -> Y) -> U). f(a)(λ x. a {x});
+    U
+    """)
+    val ctx = Ctx.empty
+    val (tm, ty) = infer(ctx, raw)
+    Check.elimAll()
+    val ems = """?0 : U = (X : U) -> ((Y : U) -> ((a : {_ : X} -> (Y)) -> ((f : (_ : {_ : X} -> (Y)) -> ((_ : (_ : X) -> (Y)) -> (U))) -> (U))))
+?1 : (X : U) -> ((Y : U) -> ((a : {_ : X} -> (Y)) -> ((f : (_ : {_ : X} -> (Y)) -> ((_ : (_ : X) -> (Y)) -> (U))) -> (U)))) = λX. λY. λa. λf. f(a)(λx. a{x})
+?2 : U = U
+?3 : (X : U) -> (U) = λX. U
+?4 : (X : U) -> ((Y : U) -> (U)) = λX. λY. {_ : X} -> (Y)
+"""
+    val ets = """let tm : ?0 = λX. λY. λa. λf. f(a)(λx. a{x});
+U"""
+    val ms = Meta.read
+    val ts = tm.read(ctx)
+    assertEquals(ms, ems)
+    assertEquals(ts, ets)
+  }
 }
