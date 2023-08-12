@@ -1,26 +1,92 @@
 package commented
 
+/*
+ * RENAME
+ */
+
+// A partial renaming on value.
 case class PartialRenaming(
     cod: Level,
     dom: Level,
     map: Map[Level, Level],
     occ: Option[MetaID]
 ):
+  // keep the next variable
   def lift: PartialRenaming =
     PartialRenaming(cod + 1, dom + 1, map + (cod -> dom), occ)
+
+  // skip the next variable
   def skip: PartialRenaming =
     PartialRenaming(cod + 1, dom, map, occ)
+
+  // add occlusion of meta to this partial renaming,
+  // to prevent solving recursive meta like ?0 = ... ?0
   def withOcc(occ: MetaID): PartialRenaming =
     PartialRenaming(cod, dom, map, Some(occ))
   def nextCod: Val = Val.Var(cod)
-  def getTermDirect(level: Level): Term =
-    Term.Var(dom - level - 1)
-  def getTerm(level: Level): Term =
-    try getTermDirect(map(level))
-    catch
-      case _ =>
-        throw InnerError.MetaRenameOutOfBound()
 
+  // prune duplicated arg from meta which is a renaming
+  // e.g. "keep a, b" for `?0 a b c` generates `?0 = \a b c. ?1 a b`,
+  // discarding param `c` from `?0`
+  def pruneVFlex(metaID: MetaID, spine: Spine): Term =
+    Meta.state(metaID) match
+      case MetaState.Unsolved(_, _) =>
+        var isRenaming = true
+        var inScope = true
+        val filtSp = spine.map { param =>
+          param.value.force match
+            case Val.Rigid(level, List()) =>
+              map.get(level) match
+                case None      => inScope = false; (None, param.icit)
+                case Some(lvl) => (Some(Term.Var(dom - level - 1)), param.icit)
+            case value =>
+              isRenaming = false
+              (Some(rename(value)), param.icit)
+        }
+        if !isRenaming && !inScope then throw InnerError.PruneNonRenaming()
+        val newMeta =
+          if inScope then Term.Meta(metaID)
+          else
+            val prun = filtSp.map {
+              case (None, _)    => Mask.Pruned
+              case (Some(_), i) => Mask.Keep(i)
+            }
+            pruneMeta(prun, metaID)
+        filtSp.foldRight(newMeta)((pair, tm) =>
+          val (opt, icit) = pair
+          opt match
+            case None        => tm
+            case Some(value) => Term.App(tm, value, icit)
+        )
+      case MetaState.Solved(value, ty) =>
+        throw InnerError.DuplicatedSolve("pruneVFlex")
+
+  // rename a value
+  def rename(value: Val): Term =
+    def renameSp(spine: Spine, initialTerm: Term) =
+      spine.foldRight(initialTerm)((param, term) =>
+        Term.App(term, rename(param.value), param.icit)
+      )
+    value.force match
+      case Val.U =>
+        Term.U
+      case Val.Flex(rhs, spine) =>
+        if occ == Some(rhs) then throw InnerError.IntersectionRename()
+        else pruneVFlex(rhs, spine)
+      case Val.Rigid(level, spine) =>
+        map.get(level) match
+          case None        => throw InnerError.MetaRenameOutOfBound()
+          case Some(value) => renameSp(spine, Term.Var(dom - level - 1))
+      case Val.Lam(param, cl, i) =>
+        Term.Lam(param, lift.rename(cl(nextCod)), i)
+      case Val.Pi(param, ty, cl, i) =>
+        Term.Pi(param, rename(ty), lift.rename(cl(nextCod)), i)
+
+/*
+ * PRUNE
+ */
+
+// wrap a term in lambdas according to given ty
 def lams(mxLvl: Level, ty: Val, initTm: Term): Term =
   def go(ty: Val, lvl: Level): Term =
     if lvl == mxLvl then initTm
@@ -32,6 +98,7 @@ def lams(mxLvl: Level, ty: Val, initTm: Term): Term =
         case _ => throw InnerError.PruningUnknownError()
   go(ty, 0)
 
+// prune specified Pi entries from a type
 def pruneTy(prun: Pruning, ty: Val): Term =
   val (pr, remTy, tmMaker) = prun
     .foldRight((PartialRenaming(0, 0, Map(), None), ty, identity[Term]))(
@@ -40,14 +107,17 @@ def pruneTy(prun: Pruning, ty: Val): Term =
         (ty.force, mask) match
           case (Val.Pi(param, ty, cl, icit), Mask.Keep(_)) =>
             def f(tm: Term) =
-              tmMaker(Term.Pi(param, rename(pr, ty), tm, icit))
+              tmMaker(Term.Pi(param, pr.rename(ty), tm, icit))
             (pr.lift, cl(pr.nextCod), f)
           case (Val.Pi(_, _, cl, _), Mask.Pruned) =>
             (pr.skip, cl(pr.nextCod), tmMaker)
           case _ => throw InnerError.PruningUnknownError()
     )
-  tmMaker(rename(pr, remTy))
+  tmMaker(pr.rename(remTy))
 
+// prune Pi entries for a meta and solve it,
+// e.g. prune `c : C` from `?0 : A -> B -> C -> X` yields
+// `?0 = \a b c. ?1 a b`
 def pruneMeta(prun: Pruning, metaID: MetaID): Term =
   Meta.state(metaID) match
     case MetaState.Unsolved(blk, ty) =>
@@ -59,39 +129,12 @@ def pruneMeta(prun: Pruning, metaID: MetaID): Term =
     case MetaState.Solved(value, ty) =>
       throw InnerError.DuplicatedSolve("pruneMeta")
 
-def pruneVFlex(pren: PartialRenaming, metaID: MetaID, spine: Spine): Term =
-  Meta.state(metaID) match
-    case MetaState.Unsolved(_, _) =>
-      var isRenaming = true
-      var inScope = true
-      val filtSp = spine.map { param =>
-        param.value.force match
-          case Val.Rigid(level, List()) =>
-            pren.map.get(level) match
-              case None      => inScope = false; (None, param.icit)
-              case Some(lvl) => (Some(pren.getTermDirect(lvl)), param.icit)
-          case value =>
-            isRenaming = false
-            (Some(rename(pren, value)), param.icit)
-      }
-      if !isRenaming && !inScope then throw InnerError.PruneNonRenaming()
-      val newMeta =
-        if inScope then Term.Meta(metaID)
-        else
-          val prun = filtSp.map {
-            case (None, _)    => Mask.Pruned
-            case (Some(_), i) => Mask.Keep(i)
-          }
-          pruneMeta(prun, metaID)
-      filtSp.foldRight(newMeta)((pair, tm) =>
-        val (opt, icit) = pair
-        opt match
-          case None        => tm
-          case Some(value) => Term.App(tm, value, icit)
-      )
-    case MetaState.Solved(value, ty) =>
-      throw InnerError.DuplicatedSolve("pruneVFlex")
+/*
+ * SOLVE
+ */
 
+// generate partial renaming from a spine,
+// removing duplicates (don't remove first occurence?)
 def invert(envLen: Level, spine: Spine): (PartialRenaming, Option[Pruning]) =
   var domVars = Set[Level]()
   var ren = Map[Level, Level]()
@@ -117,24 +160,7 @@ def invert(envLen: Level, spine: Spine): (PartialRenaming, Option[Pruning]) =
   val pren = PartialRenaming(envLen, dom, ren, None)
   if isLinear then (pren, None) else (pren, Some(prun))
 
-def rename(pr: PartialRenaming, value: Val): Term =
-  def renameSp(spine: Spine, initialTerm: Term) =
-    spine.foldRight(initialTerm)((param, term) =>
-      Term.App(term, rename(pr, param.value), param.icit)
-    )
-  value.force match
-    case Val.U =>
-      Term.U
-    case Val.Flex(rhs, spine) =>
-      if pr.occ == Some(rhs) then throw InnerError.IntersectionRename()
-      else pruneVFlex(pr, rhs, spine)
-    case Val.Rigid(level, spine) =>
-      renameSp(spine, pr.getTerm(level))
-    case Val.Lam(param, cl, i) =>
-      Term.Lam(param, rename(pr.lift, cl(pr.nextCod)), i)
-    case Val.Pi(param, ty, cl, i) =>
-      Term.Pi(param, rename(pr, ty), rename(pr.lift, cl(pr.nextCod)), i)
-
+// solve `Γ ⊢ ?lhs spine =? rhs` with known renaming
 def solve(
     lhs: MetaID,
     pair: (PartialRenaming, Option[Pruning]),
@@ -146,19 +172,18 @@ def solve(
       prun match
         case None     => ty
         case Some(pr) => pruneTy(pr, ty)
-      val tm = rename(pren.withOcc(lhs), rhs)
+      val tm = pren.withOcc(lhs).rename(rhs)
       val boxed = lams(pren.dom, ty, tm)
       Meta.solve(lhs, eval(List(), boxed), ty)
       Check.retryAll(blk)
     case MetaState.Solved(_, _) => throw InnerError.DuplicatedSolve("solve")
 
+// solve `Γ ⊢ ?lhs spine =? rhs`
 def solve(lhs: MetaID, envLen: Level, sp: Spine, rhs: Val): Unit =
   solve(lhs, invert(envLen, sp), rhs)
 
-def unifySp(envLen: Level, spx: Spine, spy: Spine) =
-  if spx.length != spy.length then throw InnerError.SpineMismatch()
-  spx.zip(spy).map((lhs, rhs) => unify(envLen, lhs.value, rhs.value))
-
+// solve (Γ ⊢ ?mx spx =? ?my spy`
+// prefer invertible spine and longer (inner) spine
 def flexFlex(envLen: Level, mx: MetaID, spx: Spine, my: MetaID, spy: Spine) =
   def go(mx: MetaID, spx: Spine, my: MetaID, spy: Spine) =
     try
@@ -169,6 +194,9 @@ def flexFlex(envLen: Level, mx: MetaID, spx: Spine, my: MetaID, spy: Spine) =
         solve(my, envLen, spy, Val.Flex(mx, spx))
   if spx.length > spy.length then go(mx, spx, my, spy) else go(my, spy, mx, spx)
 
+// solve `Γ ⊢ ?0 spx =? ?0 spy`
+// non renaming => unifySp
+// renaming => keep intersection only
 def intersect(envLen: Level, metaID: MetaID, spx: Spine, spy: Spine) =
   var isRenaming = true
   val prun = spx
@@ -181,6 +209,16 @@ def intersect(envLen: Level, metaID: MetaID, spx: Spine, spy: Spine) =
     )
   if isRenaming then pruneMeta(prun, metaID) else unifySp(envLen, spx, spy)
 
+/*
+ * UNIFY
+ */
+
+// unify two spines
+def unifySp(envLen: Level, spx: Spine, spy: Spine) =
+  if spx.length != spy.length then throw InnerError.SpineMismatch()
+  spx.zip(spy).map((lhs, rhs) => unify(envLen, lhs.value, rhs.value))
+
+// unify x and y
 def unify(envLen: Level, x: Val, y: Val): Unit =
   (x.force, y.force) match
     case (Val.U, Val.U) =>
@@ -209,12 +247,16 @@ def unify(envLen: Level, x: Val, y: Val): Unit =
       )
     case _ => throw InnerError.PlainUnifyError()
 
+// unify with contextual error catching
 def unifyCatch(ctx: Ctx, x: Val, y: Val): Unit =
   try unify(ctx.envLen, x, y)
   catch
     case e: InnerError =>
       throw InnerError.UnifyError(ctx, x.force, y.force, e)
 
+// optimize unify behaviour for placeholder
+// because unifying `tm ?= ?metaID [ctx]` has
+// trivial solution `?metaID = \[ctx]. tm`
 def unifyPlaceholder(ctx: Ctx, tm: Term, metaID: MetaID): Unit =
   Meta.state(metaID) match
     case MetaState.Unsolved(blk, ty) =>

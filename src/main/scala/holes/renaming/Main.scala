@@ -126,7 +126,7 @@ def rename(pr: PartialRenaming, value: Val): Term =
 def lams(envLen: Level, tm: Term): Term =
   (0 until envLen).foldRight(tm)((lvl, term) => Term.Lam("x" + lvl, term))
 
-// Solve Γ |- ?a sp = rhs
+// Solve Γ ⊢ ?a sp = rhs
 def solve(envLen: Level, sp: Spine, rhs: Val): Val =
   val pr = invert(envLen, sp)
   val tm = rename(pr, rhs)

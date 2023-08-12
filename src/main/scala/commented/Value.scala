@@ -2,6 +2,7 @@ package commented
 
 type Env = List[Val]
 
+// Helper functions for environment of values.
 object Env:
   def filter(env: Env, prun: Pruning) =
     env
@@ -15,15 +16,27 @@ object Env:
 
 type Spine = List[Param]
 
+// A parameter with value and icit,
+// fn (param) or fn {param}.
 case class Param(value: Val, icit: Icit):
   def force: Param = Param(value.force, icit)
   def read(ctx: Ctx): String = icit match
     case Icit.Expl => value.read(ctx)
     case Icit.Impl => s"{${value.read(ctx)}}"
 
+// A closure storing a term and its "partial environment",
+// lacking the actual argument, this can simulate a
+// `Val -> Val` effectively.
 case class Closure(env: Env, body: Term):
   def apply(arg: Val): Val = eval(arg :: env, body)
 
+// Representation of ground-level value.
+//
+// U     | U
+// Flex  | ?metaID [spine]
+// Rigid | Var(level) [spine]
+// Lam   | \(param : ty). body
+// Pi    | (param : ty). body
 enum Val:
   case U
   case Flex(metaID: MetaID, spine: Spine)
@@ -49,6 +62,7 @@ enum Val:
         case MetaState.Solved(value, _) => value(spine).force
     case _ => this
 
+// Helper functions for creating spineless values.
 object Val:
   def Var(level: Level): Val = Rigid(level, List())
   def Meta(metaID: MetaID): Val = Flex(metaID, List())
