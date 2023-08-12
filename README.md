@@ -2,6 +2,10 @@
 
 [elaboration-zoo](https://github.com/AndrasKovacs/elaboration-zoo) partially rewritten with Scala3.
 
+## If you want a full version...
+
+See `src/main/scala/commented`! This is a fully-commented version of the latest chapter, `fcpoly.polyarg`.
+
 ## Comment Logic
 
 In each file, important differences from the previous one are commented.
@@ -21,7 +25,7 @@ For example, in `implicit.insert`, `Elaboration.scala` is the only file that has
 - I added chapters that I enjoy but not necessarily relate to typechecking
     - e.g. Pretty Exceptions
 
-## Fun fact
+## Fun Facts
 
 This project is rewritten from memory, when something goes wrong, I refer to original elaboration-zoo to spot the mistake. Here are some mistakes that I've made (and of course fixed):
 

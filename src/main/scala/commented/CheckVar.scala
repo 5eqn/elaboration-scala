@@ -5,7 +5,7 @@ type CheckID = Int
 // State of checking.
 //
 // When checking `raw : ?0`, the check will be *deferred*,
-// `raw = ?metaID` will be assumed as placeholder,
+// `raw = ?metaID [ctx]` will be assumed as placeholder,
 // arguments of `check` function will be stored for *retrying*.
 //
 // If retry succeeds, store check result in the state,

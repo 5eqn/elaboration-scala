@@ -4,6 +4,11 @@ import scala.util.parsing.input.Positional
 import scala.util.parsing.input.Position
 import scala.util.parsing.input.NoPosition
 
+// Destination of application,
+//
+// Expl : explicit application, fn arg
+// ImplAuto : implicit application based on position, fn {arg}
+// ImplBind : implicit application based on name, fn {A = arg}
 enum Dst:
   case Expl
   case ImplAuto
@@ -14,6 +19,11 @@ enum Dst:
     case ImplAuto    => Icit.Impl
     case ImplBind(_) => Icit.Impl
 
+// Source of lambda,
+//
+// Expl : explicit lambda, \x.
+// ImplAuto : implicit lambda based on position, \{x}.
+// ImplBind : implicit lambda based on name, \{A = x}.
 enum Src:
   case Expl
   case ImplAuto
@@ -24,6 +34,15 @@ enum Src:
     case ImplAuto    => Icit.Impl
     case ImplBind(_) => Icit.Impl
 
+// Raw syntax representation.
+//
+// U    | U
+// Hole | _
+// Var  | name
+// App  | func arg
+// Lam  | \(param : ty). body
+// Pi   | (param : ty). body
+// Let  | let name : ty = body; next
 enum Raw extends Positional:
   case U
   case Hole
@@ -33,6 +52,7 @@ enum Raw extends Positional:
   case Pi(param: Name, ty: Raw, body: Raw, icit: Icit)
   case Let(name: Name, ty: Raw, body: Raw, next: Raw)
 
+  // make sure all Raw instances have position
   def ensurePosed(defPos: Position): Unit =
     this setPos defPos
     this match
@@ -51,6 +71,7 @@ enum Raw extends Positional:
         next.ensurePosed(pos)
       case _ =>
 
+  // pretty printing
   override def toString(): String = this match
     case U         => "U"
     case Hole      => "_"

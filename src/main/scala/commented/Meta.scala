@@ -37,7 +37,7 @@ object Meta:
   // create an unknown meta with context
   // meta type will be wrapped with "Pi"s over bound variables
   def create(ctx: Ctx, ty: Val): MetaID =
-    val term = Locals.toTerm(ctx.locals, quote(ctx.envLen, ty))
+    val term = Locals.toPis(ctx.locals, quote(ctx.envLen, ty))
     create(eval(List(), term), Set())
 
   // create an unknown meta and return it's term

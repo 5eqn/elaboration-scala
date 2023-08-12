@@ -20,7 +20,7 @@ def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) = ty.force match
 // explicit Pi type, e.g. `id: {A} -> A -> A` against `A -> A`,
 // the body term shouldn't depend on future context.
 //
-// Formally, in `Γ |- f` if `f` takes implicit argument,
+// Formally, in `Γ ⊢ f` if `f` takes implicit argument,
 // the argument's scope is only `Γ`, containing global context and
 // lambda arguments (if any), thus we need to insert meta terms
 // before future context emerges.

@@ -1,5 +1,9 @@
 package commented
 
+/*
+ * INSERT
+ */
+
 // When applying a explicit term like `f x`,
 // but if `f` takes implicit argument,
 // we need to insert meta terms until the next argument is explicit.
@@ -21,23 +25,25 @@ def insertActive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) =
     case e: InnerError =>
       throw InnerError.InsertError(ctx, tm, e)
 
-// insert until given name
+// Insert until given name.
+//
+// Stop recursing if name match,
+// observe the trivial case where
+// f : {A} -> A -> A, f {A = Int} 0
+// obviously nothing should be inserted.
+//
+// Disallow unfruitful insertion,
+// e.g. `f : {A} -> A -> A, f {X = Int}` fails
+// because {X} is not found.
 def insertUntil(ctx: Ctx, name: Name, tm: Term, ty: Val): (Term, Val) =
   try
     ty.force match
-      // stop recursing if name match
-      // observe the trivial case where
-      // f : {A} -> A -> A, f {A = Int} 0
-      // obviously nothing should be inserted
       case Val.Pi(param, _, _, Icit.Impl) if param == name =>
         (tm, ty)
       case Val.Pi(param, ty, cl, Icit.Impl) =>
         val metaTerm = Meta.fresh(ctx, ty)
         val metaVal = eval(ctx.env, metaTerm)
         insertUntil(ctx, name, Term.App(tm, metaTerm, Icit.Impl), cl(metaVal))
-      // disallow unfruitful insertion
-      // e.g. `f : {A} -> A -> A, f {X = Int}` fails
-      // because {X} is not found
       case _ => throw InnerError.ImplicitArgNotFound(name)
   catch
     case e: InnerError =>
@@ -47,7 +53,7 @@ def insertUntil(ctx: Ctx, name: Name, tm: Term, ty: Val): (Term, Val) =
 // explicit Pi type, e.g. `id: {A} -> A -> A` against `A -> A`,
 // the body term shouldn't depend on future context.
 //
-// Formally, in `Γ |- f` if `f` takes implicit argument,
+// Formally, in `Γ ⊢ f` if `f` takes implicit argument,
 // the argument's scope is only `Γ`, containing global context and
 // lambda arguments (if any), thus we need to insert meta terms
 // before future context emerges.
@@ -60,6 +66,10 @@ def insertPassive(ctx: Ctx, tm: Term, ty: Val): (Term, Val) = tm match
     (tm, ty)
   case _ => insertActive(ctx, tm, ty)
 
+/*
+ * INFER
+ */
+
 // infer type of given raw term, return elaborated result as well
 def infer(ctx: Ctx, tm: Raw): (Term, Val) =
   try
@@ -67,7 +77,7 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
       // U : U
       case Raw.U =>
         (Term.U, Val.U)
-      // _ : ?0, _ = ?1
+      // _ : ?0 [ctx], _ = ?1 [ctx]
       case Raw.Hole =>
         val ty = eval(ctx.env, Meta.fresh(ctx, Val.U))
         (Meta.fresh(ctx, ty), ty)
@@ -75,9 +85,11 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
       case Raw.Var(name) =>
         val (level, ty) = ctx(name)
         (Term.Var(ctx.envLen - level - 1), ty)
-      // insert until icit match, and
-      // func : (x : Ty) -> Cl x, arg : Ty                       ==> func arg : Cl arg
-      // func : Ty, arg : ArgTy, Ty = (x : ?0) -> ?1 x, arg : ?0 ==> func arg : ?1 arg
+      // insert until icit match,
+      // func : (x : Ty) -> Cl x, arg : Ty
+      //      ==> func arg : Cl arg
+      // func : Ty, Ty = (x : ?0 [ctx]) -> ?1 [ctx] x, arg : ?0 [ctx]
+      //      ==> func arg : ?1 [ctx] arg
       case Raw.App(func, arg, dst) =>
         val i = dst.icit
         val (funcTerm, funcType) = dst match
@@ -106,8 +118,10 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
       case Raw.Lam(_, _, _, Src.ImplBind(_)) =>
         throw InnerError.InferNamedLambda()
       // insert implicit arguments for body, and
-      // body : Body param ==> \param. body : (param : ?0) -> Body param
-      // Ty : U, ...       ==> \(param : Ty). body : (param : Ty) -> Body param
+      // body : Body param
+      //      ==> \param. body : (param : ?0 [ctx]) -> Body param
+      // Ty   : U, body : Body param
+      //      ==> \(param : Ty). body : (param : Ty) -> Body param
       case Raw.Lam(param, mTy, body, src) =>
         val i = src.icit
         val lamTyTerm = mTy match
@@ -138,6 +152,10 @@ def infer(ctx: Ctx, tm: Raw): (Term, Val) =
     case e: InnerError =>
       throw new RootError(ctx, tm, e)
 
+/*
+ * CHECK
+ */
+
 // check if given raw term has given type, and return elaborated result
 def check(ctx: Ctx, tm: Raw, ty: Val): Term =
   def isUnknown(v: Val) = v match
@@ -149,7 +167,7 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
         case Src.ImplBind(from) => from == piParam && i == Icit.Impl
         case _                  => src.icit == i
     (tm, ty.force) match
-      // _ : Ty, _ = ?0
+      // _ : Ty, _ = ?0 [ctx]
       case (Raw.Hole, ty) =>
         Meta.fresh(ctx, ty)
       // if icit match,
@@ -165,8 +183,8 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
         val paramVal = ctx.nextVal
         val bodyVal = check(ctx.bind(param, paramVal, ty), body, cl(paramVal))
         Term.Lam(param, bodyVal, i)
-      // if we check `x : {A} -> A` when `x : ?`,
-      // we solve `?` to `{A} -> A`, instead of inserting implicit argument
+      // if we check `x : {A} -> A` when `x : _`,
+      // we solve `_` to `{A} -> A`, instead of inserting implicit argument
       // According to elab-zoo, "this is a modest but useful approximation of
       // polymorphic argument inference."
       case (tm @ Raw.Var(name), ty @ Val.Pi(_, _, _, Icit.Impl))
@@ -184,6 +202,8 @@ def check(ctx: Ctx, tm: Raw, ty: Val): Term =
         val bodyVal = check(ctx.bind(param, paramVal, ty), tm, cl(paramVal))
         Term.Lam(param, bodyVal, Icit.Impl)
       // defer checking term against unknown type until it's solved
+      // e.g. check `\x y. x : ?0 [ctx]` will be deferred,
+      // because `?0 [ctx]` can be solved to start with implicit Pi
       case (tm, ty @ Val.Flex(metaID, _)) =>
         val checkID = Check.create(ctx, tm, ty)
         Meta.transfer(metaID, checkID)
