@@ -4,7 +4,7 @@
 
 ## If you want a full version...
 
-See (The Commented)[./src/main/scala/commented/Elaboration.scala]! This is a fully-commented version of the latest chapter, `fcpoly.polyarg`.
+See [The Commented](./src/main/scala/commented/Elaboration.scala)! This is a fully-commented version of the latest chapter, `fcpoly.polyarg`.
 
 ## Comment Logic
 
